@@ -1,9 +1,14 @@
+#include <math.h>
+#include <string.h>
 #include "hal.h"
 #include "test.h"
 #include "chprintf.h"
 #include "shell.h"
 #include "usbcfg.h"
 #include "sensors/imu.h"
+#include "chtm.h"
+#include "common/types.h"
+#include "vm/natives.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
 
@@ -93,6 +98,51 @@ static void cmd_readclock(BaseSequentialStream *chp, int argc, char *argv[])
 }
 
 
+extern sint16 aseba_sqrt(sint16 num);
+
+static void cmd_sqrt(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint16_t input, result;
+    float x;
+    time_measurement_t tmp;
+    chTMObjectInit(&tmp);
+
+    if(argc != 2) {
+        chprintf(chp, "Usage: sqrt mode int\r\nModes: a (aseba), b (math), c (assembler) is default mode\r\n");
+    } else {
+        input =(uint16_t) atoi(argv[1]);
+
+        if(!strcmp(argv[0], "a")) {
+            chSysLock();
+            chTMStartMeasurementX(&tmp);
+            result = aseba_sqrt(input);
+            chTMStopMeasurementX(&tmp);
+            chSysUnlock();
+        } else if(!strcmp(argv[0], "b")) {
+            chSysLock();
+            chTMStartMeasurementX(&tmp);
+            result = sqrtf(input);
+            chTMStopMeasurementX(&tmp);
+            chSysUnlock();
+        } else {
+            chSysLock();
+            chTMStartMeasurementX(&tmp);
+            x = (float) input;
+            __asm__ volatile(
+                "vsqrt.f32 %[var], %[var]"
+                : [var]"+t"(x)
+            );
+            result =(uint16_t) x;
+            chTMStopMeasurementX(&tmp);
+            chSysUnlock();
+        }
+
+        chprintf(chp, "sqrt(%u) = %u \r\n", input, result);
+        chprintf(chp, "time: %u \r\n", tmp.last);
+    }
+}
+
+
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
@@ -100,5 +150,6 @@ const ShellCommand shell_commands[] = {
     {"adctest", cmd_adctest},
     {"mpu6050", cmd_mpu6050},
     {"clock", cmd_readclock},
+    {"sqrt", cmd_sqrt},
     {NULL, NULL}
 };
