@@ -142,6 +142,39 @@ static void cmd_sqrt(BaseSequentialStream *chp, int argc, char *argv[])
     }
 }
 
+extern sint16 aseba_atan2(sint16 y, sint16 x);
+
+static void cmd_atan2(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int16_t a, b, result;
+    time_measurement_t tmp;
+    chTMObjectInit(&tmp);
+
+    if(argc != 3) {
+        chprintf(chp, "Usage: atan2 mode a b\r\nModes: a (aseba), b (math) is default mode\r\n");
+    } else {
+        a =(int16_t) atoi(argv[1]);
+        b =(int16_t) atoi(argv[2]);
+
+        if(!strcmp(argv[0], "a")) {
+            chSysLock();
+            chTMStartMeasurementX(&tmp);
+            result = aseba_atan2(a, b);
+            chTMStopMeasurementX(&tmp);
+            chSysUnlock();
+        } else {
+            chSysLock();
+            chTMStartMeasurementX(&tmp);
+            result =(int16_t)(atan2f(a, b) * 32768 / M_PI);
+            chTMStopMeasurementX(&tmp);
+            chSysUnlock();
+        }
+
+
+        chprintf(chp, "atan2(%d, %d) = %d \r\n", a, b, result);
+        chprintf(chp, "time: %u \r\n", tmp.last);
+    }
+}
 
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
@@ -151,5 +184,6 @@ const ShellCommand shell_commands[] = {
     {"mpu6050", cmd_mpu6050},
     {"clock", cmd_readclock},
     {"sqrt", cmd_sqrt},
+    {"atan2", cmd_atan2},
     {NULL, NULL}
 };
