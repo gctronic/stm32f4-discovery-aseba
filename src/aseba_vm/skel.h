@@ -38,9 +38,9 @@ void __attribute((noreturn)) run_aseba_main_loop(void);
 // 1. init the CAN module
 // 2. clear vmVariables.
 // 3. Load any bytecode in flash if present
-void init_aseba(void);
+void aseba_vm_init(void);
 
-// This function must update the variable to match the microcontroller state
+// This function must update the variables to match the microcontroller state
 // It is called _BEFORE_ running the VM, so it's a {Microcontroller state} -> {Aseba Variable}
 // synchronisation
 // Implement it yourself

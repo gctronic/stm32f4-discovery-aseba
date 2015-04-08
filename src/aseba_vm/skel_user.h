@@ -28,13 +28,11 @@ extern "C" {
  */
 #define VM_VARIABLES_ARG_SIZE 32
 
-
 /*
  * The number of opcode an aseba script can have
  */
 #define VM_BYTECODE_SIZE 766  // PUT HERE 766 + 768 * a, where a is >= 0
 #define VM_STACK_SIZE 32
-
 
 
 struct _vmVariables {
@@ -46,6 +44,7 @@ struct _vmVariables {
 	sint16 args[VM_VARIABLES_ARG_SIZE];
 
 	// Variables
+	uint16_t led;
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
@@ -72,48 +71,6 @@ struct private_settings {
 	/* The minimum size is one integer, the maximum size is 95 integer (Check done at compilation) */
 	int first_setting;
 	int second_setting;
-};
-
-
-/*
- * Descriptors
- */
-const AsebaVMDescription vmDescription = {
-	"epuck_base",
-	{
-		{1, "_id"},
-		{1, "event.source"},
-		{VM_VARIABLES_ARG_SIZE, "event.args"},
-		{1, "led"},
-		// { number of element in array, name displayed in aseba studio },
-		{0, NULL}
-	}
-};
-
-static const AsebaLocalEventDescription localEvents[] = {
-	/*******
-	---> PUT YOUR EVENT DESCRIPTIONS HERE <---
-	First value is event "name" (will be used as "onvent name" in asebastudio
-	second value is the event description)
-	*******/
-	{ NULL, NULL }
-};
-
-static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
-	&AsebaNativeDescription__system_reboot,
-	&AsebaNativeDescription__system_settings_read,
-	&AsebaNativeDescription__system_settings_write,
-
-	ASEBA_NATIVES_STD_DESCRIPTIONS,
-	0
-};
-
-static AsebaNativeFunctionPointer nativeFunctions[] = {
-	AsebaResetIntoBootloader,
-	AsebaNative__system_settings_read,
-	AsebaNative__system_settings_write,
-
-	ASEBA_NATIVES_STD_FUNCTIONS,
 };
 
 

@@ -11,12 +11,13 @@
 // TODO : include cmsis for reset function
 
 #include "skel.h"
-#include "skel_user.h"
+
+#define INSTRUCTIONS_PER_PAGE 128
+#define INSTRUCTIONS_PER_ROW  1
 
 unsigned int events_flags = 0;
 
-static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
-{
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot = {
 	"_system.reboot",
 	"Reboot the microcontroller",
 	{
@@ -84,10 +85,11 @@ static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_fl
 static void AsebaNative__system_settings_flash(AsebaVMState *vm);
 
 
+#include "skel_user.c"
+
+
 struct private_settings __attribute__((aligned(2))) settings;
 
-// Nice hack to do a compilation assert with
-#define COMPILATION_ASSERT(e) do { enum { assert_static__ = 1/(e) };} while(0)
 
 const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState *vm)
 {
@@ -174,46 +176,7 @@ const AsebaNativeFunctionDescription * const * AsebaGetNativeFunctionsDescriptio
 #define PAGE_PER_CHUNK 1
 #endif
 
-/* noload will tell the linker to allocate the space but NOT to initialise it. (left unprogrammed)*/
-/* I cannot delare it as an array since it's too large ( > 65535 ) */
-
-// Put everything in the same section, so we are 100% sure that the linker will put them contiguously.
-// Force the address, since the linker sometimes put it in the middle of the code
 #define NUMBER_OF_CHUNK 26
-unsigned char  aseba_flash[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode"), address(0x15800 - 0x800 /* bootloader */ - 0x400 /* settings */ - NUMBER_OF_CHUNK*0x400L*PAGE_PER_CHUNK)/*, noload*/));
-unsigned char aseba_flash1[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash2[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash3[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash4[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash5[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash6[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash7[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash8[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash9[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash10[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash11[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash12[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash13[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash14[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash15[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash16[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash17[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash18[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash19[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash20[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash21[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash22[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash23[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash24[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-unsigned char aseba_flash25[PAGE_PER_CHUNK][INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), aligned(INSTRUCTIONS_PER_PAGE * 2), section(".aseba_bytecode")/*, noload*/));
-
-// Saveguard the bootloader (2 pages)
-unsigned char __bootloader[INSTRUCTIONS_PER_PAGE * 2 * 2] __attribute((space(prog), section(".boot"), noload, address(0x15800 - 0x800)));
-
-// Put the settings page at a fixed position so it's independant of linker mood.
-unsigned char aseba_settings_flash[INSTRUCTIONS_PER_PAGE * 2] __attribute__ ((space(prog), section(".aseba_settings"), noload, address(0x15800 - 0x800 - 0x400)));
-#warning "the settings page is NOT initialised"
-
 
 unsigned long aseba_flash_ptr;
 unsigned long aseba_settings_ptr;
@@ -347,10 +310,6 @@ static void load_code_from_flash(AsebaVMState *vm)
 
 int load_settings_from_flash(void)
 {
-	// Max size 95 int, min 1 int
-	COMPILATION_ASSERT(sizeof(settings) < ((INSTRUCTIONS_PER_ROW*3) - 2));
-	COMPILATION_ASSERT(sizeof(settings) > 1);
-
 	// The the last "known" magic found
 	unsigned long temp = aseba_settings_ptr;
 	int i = 0;
@@ -442,14 +401,13 @@ static void __attribute__((noreturn)) error_handler(const char * file, int line,
 
 	AsebaCanFlushQueue();
 
-	asm __volatile__ ("reset");
 
 	for(;;); // Shutup GCC
 }
 
 #define FUID3 0xF80016
 
-void init_aseba(void)
+void aseba_vm_init(void)
 {
 	unsigned int low, high;
 	// Read the Device ID at _FUID3
@@ -457,12 +415,8 @@ void init_aseba(void)
  	vmState.nodeId = flash_read_low(FUID3);
 
  	// Get the section start pointer. Cannot get it in C, so use the assember-style
- 	asm("mov #tbloffset(.startof.(.aseba_bytecode)), %[l]" : [l] "=r" (low));
- 	asm("mov #tblpage(.startof.(.aseba_bytecode)), %[h]" : [h] "=r" (high));
  	aseba_flash_ptr = (unsigned long) high << 16 | low;
 
- 	asm("mov #tbloffset(.startof.(.aseba_settings)), %[l]" : [l] "=r" (low));
- 	asm("mov #tblpage(.startof.(.aseba_settings)), %[h]" : [h] "=r" (high));
  	aseba_settings_ptr = (unsigned long) high << 16 | low;
 
 	AsebaVMInit(&vmState);
@@ -495,22 +449,7 @@ void __attribute((noreturn)) run_aseba_main_loop(void) {
 			// Warning, I'm doing some nasty things with the IPL bits (forcing the value, without safeguard)
 			// Second warning: It doesn't disable level 7 interrupt. So if you set an event inside a level 7 interrupt
 			// It may get delayed until next interrupt
-			asm __volatile__ ("mov #SR, w0 \r\n"
-							"mov #0xC0, w1\r\n"
-							"ior.b w1, [w0], [w0]\r\n" // Disable all interrupts
-							"ff1r [%[word]], %[b]\r\n"
-							"bra nc, 1f\r\n"
-							"rcall _AsebaCanRecvBufferEmpty\r\n"
-					  		"cp0 w0\r\n"
-							"bra z, 1f \r\n"
-							"rcall _clock_idle\r\n"  // Powersave WITH interrupt disabled. It works, read section 6.2.5 of dsPIC manual
-							"1: \r\n"
-							"mov #SR, w0 \r\n"
-							"mov #0x1F, w1\r\n"
-							"and.b w1, [w0],[w0] \r\n" // enable interrupts
-							 : [b] "=x" (i) : [word] "r" (&events_flags) : "cc", "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7");
-							// Why putting "x" as constrain register. Because it's w8-w9, so it's preserved accross function call
-							// we do a rcall, so we must clobber w0-w7
+
 
 			// If a local event is pending, then execute it.
 			// Else, we waked up from idle because of an interrupt, so re-execute the whole thing

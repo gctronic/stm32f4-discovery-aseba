@@ -9,6 +9,8 @@
 #include "usbcfg.h"
 #include "sensors/imu.h"
 #include "cmd.h"
+#include "aseba_vm/skel.h"
+#include "aseba_vm/aseba_node.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -35,6 +37,10 @@ int main(void) {
 
     imu_init();
     imu_start();
+
+    aseba_vm_start();
+
+    chThdCreateStatic(led_blinker_wa, sizeof(led_blinker_wa), NORMALPRIO, led_blinker, NULL);
 
     shellInit();
 
