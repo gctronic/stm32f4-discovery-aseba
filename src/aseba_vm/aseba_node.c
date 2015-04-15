@@ -14,12 +14,33 @@ static THD_FUNCTION(aseba_vm_thd, arg)
     (void)arg;
 
     while (TRUE) {
-
+        palSetPad(GPIOD, GPIOD_LED3);
+        chThdSleepMilliseconds(500);
+        palClearPad(GPIOD, GPIOD_LED3);
+        chThdSleepMilliseconds(500);
     }
     return 0;
 }
 
+void aseba_vm_init(void)
+{
+    vmState.nodeId = 1;
+
+    AsebaVMInit(&vmState);
+    vmVariables.id = vmState.nodeId;
+
+    palSetPad(GPIOD, GPIOD_LED3);
+    chThdSleepMilliseconds(200);
+    palClearPad(GPIOD, GPIOD_LED3);
+    chThdSleepMilliseconds(200);
+    palSetPad(GPIOD, GPIOD_LED3);
+    chThdSleepMilliseconds(200);
+    palClearPad(GPIOD, GPIOD_LED3);
+}
+
 void aseba_vm_start(void)
 {
+    aseba_vm_init();
+
     chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), NORMALPRIO, aseba_vm_thd, NULL);
 }
