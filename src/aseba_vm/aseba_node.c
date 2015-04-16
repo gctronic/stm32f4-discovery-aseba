@@ -13,6 +13,8 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 {
     (void)arg;
 
+    aseba_vm_init();
+
     while (TRUE) {
         palSetPad(GPIOD, GPIOD_LED3);
         chThdSleepMilliseconds(500);
@@ -40,7 +42,5 @@ void aseba_vm_init(void)
 
 void aseba_vm_start(void)
 {
-    aseba_vm_init();
-
     chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), NORMALPRIO, aseba_vm_thd, NULL);
 }
