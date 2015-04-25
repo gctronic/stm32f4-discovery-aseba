@@ -16,8 +16,9 @@
 
 
 
-int main(void) {
-    thread_t *shelltp = NULL;
+int main(void)
+{
+    //thread_t *shelltp = NULL;
 
     halInit();
     chSysInit();
@@ -42,6 +43,7 @@ int main(void) {
 
     chThdCreateStatic(led_blinker_wa, sizeof(led_blinker_wa), NORMALPRIO, led_blinker, NULL);
 
+    /*
     shellInit();
 
     static const ShellConfig shell_cfg1 = {
@@ -62,4 +64,5 @@ int main(void) {
         }
         chThdSleepMilliseconds(500);
     }
+    */
 }
