@@ -25,18 +25,22 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 
         update_robot_variables();
         AsebaProcessIncomingEvents(&vmState);
-        AsebaVMRun(&vmState, 10);
+        AsebaVMRun(&vmState, 1);
     }
     return 0;
 }
 
 void aseba_vm_init(void)
 {
-    vmState.nodeId = 1;
+    vmState.nodeId = 5428;
+
+    chprintf((BaseSequentialStream *)&SD2, "vm pc00: %d\n", vmState.pc);
 
     AsebaVMInit(&vmState);
     vmVariables.id = vmState.nodeId;
     vmVariables.productId = ASEBA_PID_THYMIO2;
+
+    chprintf((BaseSequentialStream *)&SD2, "vm pc1: %d\n", vmState.pc);
 
     // vmState.bytecode[1] = (ASEBA_BYTECODE_SMALL_IMMEDIATE << 12) | 20; // push 20 on stack
     // vmState.bytecode[2] = (ASEBA_BYTECODE_SMALL_IMMEDIATE << 12) | 22; // push 22 on stack
@@ -84,15 +88,15 @@ void aseba_vm_init(void)
     vmState.bytecode[34] = 0x0000;
     vmState.bytecode[35] = 0x6cef;
 
-    chprintf((BaseSequentialStream *)&SD2, "vm pc1: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc2: %d\n", vmState.pc);
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
-    chprintf((BaseSequentialStream *)&SD2, "vm pc2: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc3: %d\n", vmState.pc);
 
     AsebaVMRun(&vmState, 10);
 
-    chprintf((BaseSequentialStream *)&SD2, "vm pc3: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc4: %d\n", vmState.pc);
 
     palSetPad(GPIOD, GPIOD_LED6);
     chThdSleepMilliseconds(200);
