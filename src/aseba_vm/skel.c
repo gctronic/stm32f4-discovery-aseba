@@ -54,16 +54,16 @@ void AsebaPutVmToSleep(AsebaVMState *vm)
 
 void AsebaSendBuffer(AsebaVMState *vm, const uint8* data, uint16 length)
 {
-    chnWrite(&SDU1, data, length);
-    chprintf((BaseSequentialStream *)&SDU1, "send_buffer\n");
-    //chSequentialStreamWrite((BaseSequentialStream *)&SDU1, data, length);
+    chnWrite(&SD2, data, length);
+    chprintf((BaseSequentialStream *)&SD2, "send_buffer\n");
+    //chSequentialStreamWrite((BaseSequentialStream *)&SD2, data, length);
 }
 
 uint16 AsebaGetBuffer(AsebaVMState *vm, uint8* data, uint16 maxLength, uint16* source)
 {
-    chnReadTimeout(&SDU1, data, maxLength, 100);
-    chprintf((BaseSequentialStream *)&SDU1, "get_buffer %s of size %d\n", data, strlen((char *)data));
-    //chSequentialStreamRead((BaseSequentialStream *)&SDU1, data, maxLength);
+    chnReadTimeout(&SD2, data, maxLength, 100);
+    chprintf((BaseSequentialStream *)&SD2, "get_buffer %s of size %d\n", data, strlen((char *)data));
+    //chSequentialStreamRead((BaseSequentialStream *)&SD2, data, maxLength);
     memcpy(source, data, 2);
     return strlen(data);
 }

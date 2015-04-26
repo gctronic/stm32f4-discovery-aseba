@@ -21,7 +21,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
         palTogglePad(GPIOD, GPIOD_LED6);
         chThdSleepMilliseconds(100);
 
-        chprintf((BaseSequentialStream *)&SDU1, "vm pc0: %d\n", vmState.pc);
+        chprintf((BaseSequentialStream *)&SD2, "vm pc0: %d\n", vmState.pc);
 
         update_robot_variables();
         AsebaProcessIncomingEvents(&vmState);
@@ -84,15 +84,15 @@ void aseba_vm_init(void)
     vmState.bytecode[34] = 0x0000;
     vmState.bytecode[35] = 0x6cef;
 
-    chprintf((BaseSequentialStream *)&SDU1, "vm pc1: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc1: %d\n", vmState.pc);
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
-    chprintf((BaseSequentialStream *)&SDU1, "vm pc2: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc2: %d\n", vmState.pc);
 
     AsebaVMRun(&vmState, 10);
 
-    chprintf((BaseSequentialStream *)&SDU1, "vm pc3: %d\n", vmState.pc);
+    chprintf((BaseSequentialStream *)&SD2, "vm pc3: %d\n", vmState.pc);
 
     palSetPad(GPIOD, GPIOD_LED6);
     chThdSleepMilliseconds(200);
