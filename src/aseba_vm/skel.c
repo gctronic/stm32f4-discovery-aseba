@@ -1,7 +1,10 @@
 #include <string.h>
 
 // ChibiOS includes
-#include <hal.h>
+#include "ch.h"
+#include "hal.h"
+#include "chprintf.h"
+#include "usbcfg.h"
 
 // Aseba includes
 #include "vm/natives.h"
@@ -47,4 +50,52 @@ void AsebaIdle(void)
 void AsebaPutVmToSleep(AsebaVMState *vm)
 {
     chThdSleepMilliseconds(500);
+}
+
+void AsebaSendBuffer(AsebaVMState *vm, const uint8* data, uint16 length)
+{
+    chnWrite(&SDU1, data, length);
+    chprintf((BaseSequentialStream *)&SDU1, "send_buffer\n");
+    //chSequentialStreamWrite((BaseSequentialStream *)&SDU1, data, length);
+}
+
+uint16 AsebaGetBuffer(AsebaVMState *vm, uint8* data, uint16 maxLength, uint16* source)
+{
+    chnReadTimeout(&SDU1, data, maxLength, 100);
+    chprintf((BaseSequentialStream *)&SDU1, "get_buffer %s of size %d\n", data, strlen((char *)data));
+    //chSequentialStreamRead((BaseSequentialStream *)&SDU1, data, maxLength);
+    memcpy(source, data, 2);
+    return strlen(data);
+}
+
+void AsebaResetIntoBootloader(AsebaVMState *vm)
+{
+
+}
+
+void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
+{
+    nativeFunctions[id](vm);
+}
+
+const AsebaNativeFunctionDescription * const * AsebaGetNativeFunctionsDescriptions(AsebaVMState *vm)
+{
+    return nativeFunctionsDescription;
+}
+
+
+const AsebaVMDescription* AsebaGetVMDescription(AsebaVMState *vm)
+{
+    return &vmDescription;
+}
+
+const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState *vm)
+{
+    return localEvents;
+}
+
+
+void AsebaWriteBytecode(AsebaVMState *vm)
+{
+
 }

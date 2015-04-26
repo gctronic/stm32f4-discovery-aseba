@@ -50,8 +50,10 @@ int main(void)
         (BaseSequentialStream *)&SDU1,
         shell_commands
     };
+    */
 
     while (TRUE) {
+    /*
         if (!shelltp) {
             if (SDU1.config->usbp->state == USB_ACTIVE) {
                 shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);
@@ -62,7 +64,8 @@ int main(void)
                 shelltp = NULL;
             }
         }
+    */
         chThdSleepMilliseconds(500);
     }
-    */
+
 }

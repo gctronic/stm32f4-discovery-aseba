@@ -31,20 +31,18 @@ extern "C" {
 /*
  * The number of opcode an aseba script can have
  */
-#define VM_BYTECODE_SIZE 766  // PUT HERE 766 + 768 * a, where a is >= 0
+#define VM_BYTECODE_SIZE (766 + 768)  // PUT HERE 766 + 768 * a, where a is >= 0
 #define VM_STACK_SIZE 32
 
 
 struct _vmVariables {
-	// NodeID
-	sint16 id;
-	// Source
-	sint16 source;
-	// Args
-	sint16 args[VM_VARIABLES_ARG_SIZE];
+	sint16 id; 							// NodeID
+	sint16 source; 						// Source
+	sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
+	sint16 productId;					// Product ID
 
 	// Variables
-	uint16_t led;
+	uint16 led;
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];

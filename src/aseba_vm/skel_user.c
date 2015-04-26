@@ -2,20 +2,23 @@
  * Descriptors
  */
 const AsebaVMDescription vmDescription = {
-	"epuck_base",
+	"EpuckBase",
 	{
 		// { number of element in array, name displayed in aseba studio }
 		{1, "_id"},
 		{1, "event.source"},
 		{VM_VARIABLES_ARG_SIZE, "event.args"},
+		{1, "_productId"},
+
 		{1, "led"},
+
 		{0, NULL}
 	}
 };
 
 // Event descriptions
 static const AsebaLocalEventDescription localEvents[] = {
-	{ NULL, NULL }
+	{NULL, NULL}
 };
 
 // Native function descriptions
