@@ -41,8 +41,6 @@ int main(void)
 
     aseba_vm_start();
 
-    chThdCreateStatic(led_blinker_wa, sizeof(led_blinker_wa), NORMALPRIO, led_blinker, NULL);
-
     /*
     shellInit();
 
