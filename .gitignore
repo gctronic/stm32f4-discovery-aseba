@@ -8,4 +8,11 @@ debug/
 
 CMakeLists.txt
 
+tags*
 .tags*
+*.o
+*.d
+*.bin
+*.elf
+*.hex
+*.size.txt
