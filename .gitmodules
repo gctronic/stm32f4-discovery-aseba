@@ -16,3 +16,6 @@
 [submodule "src/crc"]
 	path = src/crc
 	url = https://github.com/epuck2/crc
+[submodule "src/serial-can-bridge"]
+	path = src/serial-can-bridge
+	url = https://github.com/cvra/serial-can-bridge

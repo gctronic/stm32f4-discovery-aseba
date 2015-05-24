@@ -11,6 +11,7 @@
 #include "cmd.h"
 #include "aseba_vm/skel.h"
 #include "aseba_vm/aseba_node.h"
+#include "aseba_vm/aseba_can_interface.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -39,6 +40,7 @@ int main(void)
     imu_init();
     imu_start();
 
+    aseba_can_start();
     aseba_vm_start();
 
     /*
