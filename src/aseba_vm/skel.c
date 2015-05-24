@@ -3,8 +3,6 @@
 // ChibiOS includes
 #include "ch.h"
 #include "hal.h"
-#include "chprintf.h"
-#include "usbcfg.h"
 
 // Aseba includes
 #include "vm/natives.h"
@@ -44,19 +42,17 @@ AsebaVMState vmState = {
  */
 void AsebaIdle(void)
 {
-    chprintf((BaseSequentialStream *)&SD2, "aseba idle\n");
     chThdSleepMilliseconds(1);
 }
 
 void AsebaPutVmToSleep(AsebaVMState *vm)
 {
-    chprintf((BaseSequentialStream *)&SD2, "aseba sleep\n");
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(1000);
 }
 
 void AsebaResetIntoBootloader(AsebaVMState *vm)
 {
-
+    NVIC_SystemReset();
 }
 
 void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
@@ -80,7 +76,8 @@ const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState 
     return localEvents;
 }
 
-uint16 AsebaShouldDropPacket(uint16 source, const uint8* data) {
+uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
+{
     return AsebaVMShouldDropPacket(&vmState, source, data);
 }
 

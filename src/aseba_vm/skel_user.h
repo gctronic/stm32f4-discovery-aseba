@@ -32,7 +32,7 @@ extern "C" {
  * The number of opcode an aseba script can have
  */
 #define VM_BYTECODE_SIZE (766 + 768)  // PUT HERE 766 + 768 * a, where a is >= 0
-#define VM_STACK_SIZE 32
+#define VM_STACK_SIZE 128
 
 
 struct _vmVariables {
@@ -42,7 +42,7 @@ struct _vmVariables {
 	sint16 productId;					// Product ID
 
 	// Variables
-	uint16 led;
+	bool led;
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
