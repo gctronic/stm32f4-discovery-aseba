@@ -94,7 +94,9 @@ include src/aseba_vm/aseba.mk
 include src/src.mk
 
 # Define linker script file here
+# if you don't want to use the bootloader use the linkerscript stm32f407xG_no_bootloader.ld instead
 LDSCRIPT= stm32f407xG.ld
+# LDSCRIPT= stm32f407xG_no_bootloader.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
