@@ -24,7 +24,7 @@ extern "C" {
 #define VM_VARIABLES_FREE_SPACE 256
 
 /*
- * This is the maximum number of argument an aseba event can recieve
+ * This is the maximum number of argument an aseba event can receive
  */
 #define VM_VARIABLES_ARG_SIZE 32
 
@@ -39,6 +39,7 @@ struct _vmVariables {
 	sint16 id; 							// NodeID
 	sint16 source; 						// Source
 	sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
+	sint16 fwversion[2];				// Firmware version
 	sint16 productId;					// Product ID
 
 	// Variables

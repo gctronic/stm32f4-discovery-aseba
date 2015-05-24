@@ -34,6 +34,8 @@ void aseba_vm_init(void)
     AsebaVMInit(&vmState);
     vmVariables.id = vmState.nodeId;
     vmVariables.productId = ASEBA_PID_EPUCK;
+    vmVariables.fwversion[0] = 0;
+    vmVariables.fwversion[1] = 1;
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
