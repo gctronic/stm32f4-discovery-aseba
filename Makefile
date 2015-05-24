@@ -94,7 +94,7 @@ include src/aseba_vm/aseba.mk
 include src/src.mk
 
 # Define linker script file here
-LDSCRIPT= $(PORTLD)/STM32F407xG.ld
+LDSCRIPT= stm32f407xG.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -164,7 +164,7 @@ CPPC = $(TRGT)g++
 #       runtime support makes code size explode.
 LD   = $(TRGT)gcc
 #LD   = $(TRGT)g++
-CP   = $(TRGT)objcopy
+CP   = $(TRGT)objcopy -j startup -j constructors -j destructors -j .text -j .ARM.extab -j .ARM.exidx -j .eh_frame_hdr -j .eh_frame -j .textalign -j .data
 AS   = $(TRGT)gcc -x assembler-with-cpp
 AR   = $(TRGT)ar
 OD   = $(TRGT)objdump
@@ -211,7 +211,8 @@ ULIBS =
 # End of user defines
 ##############################################################################
 
-RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
+# RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
+RULESPATH = .
 include $(RULESPATH)/rules.mk
 
 flash: build/$(PROJECT).elf
