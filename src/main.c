@@ -40,7 +40,7 @@ int main(void)
     imu_init();
     imu_start();
 
-    aseba_can_start();
+    aseba_can_start(&vmState);
     aseba_vm_start();
 
     /*

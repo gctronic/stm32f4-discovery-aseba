@@ -1,12 +1,14 @@
 #include "ch.h"
 #include "hal.h"
+
+#include "transport/can/can-net.h"
+#include "vm/vm.h"
+
 #include "aseba_can_interface.h"
-#include <serial-can-bridge/serial_can_bridge.h>
 
+#define ASEBA_CAN_SEND_QUEUE_SIZE       512
+#define ASEBA_CAN_RECEIVE_QUEUE_SIZE    512
 
-void can_interface_send(struct can_frame *frame);
-void can_rx_buffer_flush(void);
-void can_tx_buffer_flush(void);
 
 static const CANConfig can1_config = {
     .mcr = (1 << 6)  /* Automatic bus-off management enabled. */
@@ -26,101 +28,39 @@ static const CANConfig can1_config = {
 #endif
 };
 
-#define CAN_RX_QUEUE_SIZE   512
-#define CAN_TX_QUEUE_SIZE   512
-
-memory_pool_t can_rx_pool;
-memory_pool_t can_tx_pool;
-mailbox_t can_rx_queue;
-mailbox_t can_tx_queue;
-msg_t rx_mbox_buf[CAN_RX_QUEUE_SIZE];
-msg_t tx_mbox_buf[CAN_TX_QUEUE_SIZE];
-
-struct can_frame rx_pool_buf[CAN_RX_QUEUE_SIZE];
-struct can_frame tx_pool_buf[CAN_TX_QUEUE_SIZE];
-
-static THD_WORKING_AREA(can_tx_thread_wa, 256);
-static THD_FUNCTION(can_tx_thread, arg) {
-    (void)arg;
-    chRegSetThreadName("CAN tx");
-    while (1) {
-        struct can_frame *framep;
-        msg_t m = chMBFetch(&can_tx_queue, (msg_t *)&framep, TIME_INFINITE);
-        if (m != MSG_OK) {
-            continue;
-        }
-        CANTxFrame txf;
-        uint32_t id = framep->id;
-        txf.RTR = 0;
-        if (id & CAN_FRAME_EXT_FLAG) {
-            txf.EID = id & CAN_FRAME_EXT_ID_MASK;
-            txf.IDE = 1;
-        } else {
-            txf.SID = id & CAN_FRAME_STD_ID_MASK;
-            txf.IDE = 0;
-        }
-
-        if (id & CAN_FRAME_RTR_FLAG) {
-            txf.RTR = 1;
-        }
-
-        txf.DLC = framep->dlc;
-        txf.data32[0] = framep->data.u32[0];
-        txf.data32[1] = framep->data.u32[1];
-
-        chPoolFree(&can_tx_pool, framep);
-        canTransmit(&CAND1, CAN_ANY_MAILBOX, &txf, MS2ST(100));
-    }
-    return 0;
-}
+CanFrame aseba_can_send_queue[ASEBA_CAN_SEND_QUEUE_SIZE];
+CanFrame aseba_can_receive_queue[ASEBA_CAN_RECEIVE_QUEUE_SIZE];
 
 static THD_WORKING_AREA(can_rx_thread_wa, 256);
 static THD_FUNCTION(can_rx_thread, arg) {
     (void)arg;
     chRegSetThreadName("CAN rx");
     while (1) {
-        uint32_t id;
         CANRxFrame rxf;
+        CanFrame aseba_can_frame;
         msg_t m = canReceive(&CAND1, CAN_ANY_MAILBOX, &rxf, MS2ST(1000));
         if (m != MSG_OK) {
             continue;
         }
         if (rxf.IDE) {
-            id = rxf.EID | CAN_FRAME_EXT_FLAG;
-        } else {
-            id = rxf.SID;
+            continue; // no extended id frames
         }
         if (rxf.RTR) {
-            id |= CAN_FRAME_RTR_FLAG;
+            continue; // no remote transmission request frames
         }
-        struct can_frame *f = (struct can_frame *)chPoolAlloc(&can_rx_pool);
-        if (f == NULL) {
-            continue;
+        aseba_can_frame.id = rxf.SID;
+        aseba_can_frame.len = rxf.DLC;
+        int i;
+        for (i = 0; i < aseba_can_frame.len; i++) {
+            aseba_can_frame.data[i] = rxf.data8[i];
         }
-        f->id = id;
-        f->dlc = rxf.DLC;
-        f->data.u32[0] = rxf.data32[0];
-        f->data.u32[1] = rxf.data32[1];
-        if (chMBPost(&can_rx_queue, (msg_t)f, TIME_IMMEDIATE) != MSG_OK) {
-            // couldn't post message: drop data & free the memory
-            chPoolFree(&can_rx_pool, f);
-        }
+        AsebaCanFrameReceived(&aseba_can_frame);
     }
     return 0;
 }
 
 void can_init(void)
 {
-    // rx queue
-    chMBObjectInit(&can_rx_queue, rx_mbox_buf, CAN_RX_QUEUE_SIZE);
-    chPoolObjectInit(&can_rx_pool, sizeof(struct can_frame), NULL);
-    chPoolLoadArray(&can_rx_pool, rx_pool_buf, sizeof(rx_pool_buf)/sizeof(struct can_frame));
-
-    // tx queue
-    chMBObjectInit(&can_tx_queue, tx_mbox_buf, CAN_TX_QUEUE_SIZE);
-    chPoolObjectInit(&can_tx_pool, sizeof(struct can_frame), NULL);
-    chPoolLoadArray(&can_tx_pool, tx_pool_buf, sizeof(tx_pool_buf)/sizeof(struct can_frame));
-
 #if defined(BOARD_ST_STM32F4_DISCOVERY)
     // CAN1 gpio init
     iomode_t mode = PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL
@@ -133,78 +73,53 @@ void can_init(void)
 #endif
 }
 
-void can_rx_buffer_flush(void)
+
+
+void aseba_can_rx_dropped(void)
 {
-    void *p;
-    while (chMBFetch(&can_rx_queue, (msg_t *)&p, TIME_IMMEDIATE) == MSG_OK) {
-        chPoolFree(&can_rx_pool, p);
-    }
 }
 
-void can_tx_buffer_flush(void)
+void aseba_can_tx_dropped(void)
 {
-    void *p;
-    while (chMBFetch(&can_tx_queue, (msg_t *)&p, TIME_IMMEDIATE) == MSG_OK) {
-        chPoolFree(&can_tx_pool, p);
-    }
 }
 
-char hex4(uint8_t b)
+void aseba_can_send_frame(const CanFrame *frame)
 {
-    b &= 0x0f;
-    if (b < 10) {
-        return '0' + b;
-    } else {
-        return 'a' - 10 + b;
+    CANTxFrame txf;
+    txf.DLC = frame->len;
+    txf.RTR = 0;
+    txf.IDE = 0;
+    txf.SID = frame->id;
+
+    int i;
+    for (i = 0; i < frame->len; i++) {
+        txf.data8[i] = frame->data[i];
     }
+
+    canTransmit(&CAND1, CAN_ANY_MAILBOX, &txf, MS2ST(100));
 }
 
-uint32_t hex_read(const char *s)
+// reutrns true if there is enough space to send the frame
+int aseba_can_is_frame_room(void)
 {
-    uint32_t x = 0;
-    while (*s) {
-        if (*s >= '0' && *s <= '9') {
-            x = (x << 4) | (*s - '0');
-        } else if (*s >= 'a' && *s <= 'f') {
-            x = (x << 4) | (*s - 'a' + 0x0a);
-        } else if (*s >= 'A' && *s <= 'F') {
-            x = (x << 4) | (*s - 'A' + 0x0A);
-        } else {
-            break;
-        }
-        s++;
-    }
-    return x;
+    return can_lld_is_tx_empty(&CAND1, CAN_ANY_MAILBOX);
 }
 
-void can_interface_send(struct can_frame *frame)
-{
-    struct can_frame *tx = (struct can_frame *)chPoolAlloc(&can_tx_pool);
-    if (tx == NULL) {
-        return;
-    }
-    tx->id = frame->id;
-    tx->dlc = frame->dlc;
-    tx->data.u32[0] = frame->data.u32[0];
-    tx->data.u32[1] = frame->data.u32[1];
-    if (chMBPost(&can_tx_queue, (msg_t)tx, MS2ST(100)) != MSG_OK) {
-        // couldn't post, free memory
-        chPoolFree(&can_tx_pool, tx);
-    }
-    return;
-}
-
-void aseba_can_start(void)
+void aseba_can_start(AsebaVMState *vm_state)
 {
     can_init();
-    chThdCreateStatic(can_tx_thread_wa, sizeof(can_tx_thread_wa), NORMALPRIO, can_tx_thread, NULL);
     chThdCreateStatic(can_rx_thread_wa, sizeof(can_rx_thread_wa), NORMALPRIO+1, can_rx_thread, NULL);
+    AsebaCanInit(vm_state->nodeId, aseba_can_send_frame, aseba_can_is_frame_room,
+                aseba_can_rx_dropped, aseba_can_tx_dropped,
+                aseba_can_send_queue, ASEBA_CAN_SEND_QUEUE_SIZE,
+                aseba_can_receive_queue, ASEBA_CAN_RECEIVE_QUEUE_SIZE);
 }
 
-// bool aseba_can_send_frame(uint8_t* frame)
-// {
-//     (void) frame;
-// }
+
+
+
+
+
 
 /*
  * For Aseba Can init

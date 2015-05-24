@@ -54,38 +54,6 @@ void AsebaPutVmToSleep(AsebaVMState *vm)
     chThdSleepMilliseconds(500);
 }
 
-void AsebaSendBuffer(AsebaVMState *vm, const uint8* data, uint16 length)
-{
-    chnWrite(&SDU1, data, length);
-    chprintf((BaseSequentialStream *)&SD2, "send_buffer\n");
-    //chSequentialStreamWrite((BaseSequentialStream *)&SD2, data, length);
-}
-
-uint16 AsebaGetBuffer(AsebaVMState *vm, uint8* data, uint16 maxLength, uint16* source)
-{
-    static uint16_t len = 0;
-    static size_t data_available;
-
-    data_available = chnReadTimeout(&SDU1, &len, 2, TIME_IMMEDIATE);
-
-    chprintf((BaseSequentialStream *)&SD2, "get_buffer of size %d\n", len);
-
-    if(data_available >= 2) {
-        chnRead(&SDU1, source, 2);
-
-        len += 2;
-        if (len > maxLength) {
-            len = maxLength;
-        }
-
-        chnRead(&SDU1, data, len);
-    }
-
-    //chSequentialStreamRead((BaseSequentialStream *)&SD2, data, maxLength);
-
-    return len;
-}
-
 void AsebaResetIntoBootloader(AsebaVMState *vm)
 {
 
@@ -112,6 +80,9 @@ const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState 
     return localEvents;
 }
 
+uint16 AsebaShouldDropPacket(uint16 source, const uint8* data) {
+    return AsebaVMShouldDropPacket(&vmState, source, data);
+}
 
 void AsebaWriteBytecode(AsebaVMState *vm)
 {
