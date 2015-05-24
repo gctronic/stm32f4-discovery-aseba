@@ -19,3 +19,6 @@
 [submodule "src/serial-can-bridge"]
 	path = src/serial-can-bridge
 	url = https://github.com/cvra/serial-can-bridge
+[submodule "aseba-bootloader/libopencm3"]
+	path = aseba-bootloader/libopencm3
+	url = https://github.com/libopencm3/libopencm3.git
