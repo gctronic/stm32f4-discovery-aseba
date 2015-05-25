@@ -24,36 +24,34 @@ const AsebaVMDescription vmDescription = {
 
 // Event descriptions
 static const AsebaLocalEventDescription localEvents[] = {
-    {"led", "led blink"},
 	{NULL, NULL}
 };
 
 
-static AsebaNativeFunctionDescription AsebaNativeDescription_led_toggle =
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
 {
-	"led_toggle",
-	"Toggles the LED",
-	{
-		{0,0}
-	}
+    "_system.reboot",
+    "Reboot the microcontroller",
+    {
+        {0,0}
+    }
 };
 
-void AsebaNative_led_toggle(AsebaVMState *vm)
+void AsebaNative__system_reboot(AsebaVMState *vm)
 {
-	palTogglePad(GPIOD, GPIOD_LED4);
-	vmVariables.led = !(vmVariables.led);
+    NVIC_SystemReset();
 }
 
 // Native function descriptions
 static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
-	&AsebaNative_led_toggle,
+	&AsebaNativeDescription__system_reboot,
 	ASEBA_NATIVES_STD_DESCRIPTIONS,
 	0
 };
 
 // Native function pointers
 static AsebaNativeFunctionPointer nativeFunctions[] = {
-	AsebaNative_led_toggle,
+	AsebaNative__system_reboot,
 	ASEBA_NATIVES_STD_FUNCTIONS,
 };
 
