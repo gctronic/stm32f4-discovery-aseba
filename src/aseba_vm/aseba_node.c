@@ -15,14 +15,21 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 {
     (void)arg;
 
+    aseba_vm_init();
+
     while (TRUE) {
         palTogglePad(GPIOD, GPIOD_LED6);
         chThdSleepMilliseconds(100);
 
-        update_robot_variables();
+        // Sync Aseba with the state of the Microcontroller
+        update_aseba_variables_read();
 
+        // Run VM for some time
         AsebaProcessIncomingEvents(&vmState);
         AsebaVMRun(&vmState, 1000);
+
+        // Sync the Microcontroller with the state of Aseba
+        update_aseba_variables_write();
     }
     return 0;
 }
@@ -55,7 +62,19 @@ void aseba_vm_start(void)
     chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), NORMALPRIO, aseba_vm_thd, NULL);
 }
 
-void update_robot_variables(void)
+// This function must update the variable to match the microcontroller state
+// It is called _BEFORE_ running the VM, so it's a {Microcontroller state} -> {Aseba Variable}
+// synchronisation
+void update_aseba_variables_read(void)
 {
 
 }
+
+// This function must update the microcontrolleur state to match the variables
+// It is called _AFTER_ running the VM, so it's a {Aseba Variables} -> {Microcontroller state}
+// synchronisation
+void update_aseba_variables_write(void)
+{
+
+}
+

@@ -24,6 +24,8 @@ const AsebaVMDescription vmDescription = {
 
 // Event descriptions
 static const AsebaLocalEventDescription localEvents[] = {
+	{"first", "first dummy event"},
+	{"second", "second dummy event"},
 	{NULL, NULL}
 };
 
@@ -54,5 +56,3 @@ static AsebaNativeFunctionPointer nativeFunctions[] = {
 	AsebaNative__system_reboot,
 	ASEBA_NATIVES_STD_FUNCTIONS,
 };
-
-

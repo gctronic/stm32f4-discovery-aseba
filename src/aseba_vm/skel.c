@@ -81,6 +81,7 @@ uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
     return AsebaVMShouldDropPacket(&vmState, source, data);
 }
 
+// Used to write bytecode in the flash, not implemented yet
 void AsebaWriteBytecode(AsebaVMState *vm)
 {
 
