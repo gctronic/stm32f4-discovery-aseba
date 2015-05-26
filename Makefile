@@ -221,6 +221,12 @@ ULIBS =
 # End of user defines
 ##############################################################################
 
+
+build/ch_patched.hex: build/ch.hex
+	python patch_hex.py build/ch.hex build/ch_patched.hex
+
+MAKE_ALL_RULE_HOOK = build/ch_patched.hex
+
 # RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 RULESPATH = .
 include $(RULESPATH)/rules.mk
