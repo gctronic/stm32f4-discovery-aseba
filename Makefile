@@ -3,6 +3,8 @@
 # NOTE: Can be overridden externally.
 #
 
+USE_ASEBA_BOOTLOADER = yes
+
 # Compiler options here.
 ifeq ($(USE_OPT),)
   USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
@@ -95,8 +97,11 @@ include src/src.mk
 
 # Define linker script file here
 # if you don't want to use the bootloader use the linkerscript stm32f407xG_no_bootloader.ld instead
+ifeq ($(USE_ASEBA_BOOTLOADER),yes)
 LDSCRIPT= stm32f407xG.ld
-# LDSCRIPT= stm32f407xG_no_bootloader.ld
+else
+LDSCRIPT= stm32f407xG_no_bootloader.ld
+endif
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -196,6 +201,9 @@ CPPWARN = -Wall -Wextra
 
 # List all user C define here, like -D_DEBUG=1
 UDEFS = -DARM_MATH_CM4
+ifeq ($(USE_ASEBA_BOOTLOADER),yes)
+UDEFS = -DCORTEX_VTOR_INIT=0x08020000
+endif
 
 # Define ASM defines here
 UADEFS =
