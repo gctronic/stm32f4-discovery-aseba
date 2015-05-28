@@ -97,6 +97,8 @@ void aseba_can_send_frame(const CanFrame *frame)
     }
 
     canTransmit(&CAND1, CAN_ANY_MAILBOX, &txf, MS2ST(100));
+    chThdSleepMilliseconds(1);
+    AsebaCanFrameSent();
 }
 
 // reutrns true if there is enough space to send the frame
