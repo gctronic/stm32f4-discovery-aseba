@@ -52,8 +52,6 @@ struct _vmVariables {
 
 enum Events
 {
-	YOUR_FIRST_EVENT = 0,
-	YOUR_SECOND_EVENT,
 	/****
 	---> PUT YOUR EVENT NUMBER HERE <---
 	Must be in the same order as in skel.c
@@ -68,8 +66,7 @@ enum Events
 struct private_settings {
 	/* ADD here the settings to save into flash */
 	/* The minimum size is one integer, the maximum size is 95 integer (Check done at compilation) */
-	int first_setting;
-	int second_setting;
+	int settings[95];
 };
 
 

@@ -2,14 +2,15 @@
 #include "hal.h"
 
 #include "skel.h"
+#include "vm/natives.h"
 
 /*
  * Descriptors
  */
 const AsebaVMDescription vmDescription = {
-	"Epuck 2",
+	"Epuck2",
 	{
-		// { number of element in array, name displayed in aseba studio }
+		// {Number of element in array, Name displayed in aseba studio}
 		{1, "_id"},
 		{1, "event.source"},
 		{VM_VARIABLES_ARG_SIZE, "event.args"},
@@ -24,8 +25,6 @@ const AsebaVMDescription vmDescription = {
 
 // Event descriptions
 static const AsebaLocalEventDescription localEvents[] = {
-	{"first", "first dummy event"},
-	{"second", "second dummy event"},
 	{NULL, NULL}
 };
 
@@ -47,12 +46,12 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 // Native function descriptions
 static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
-	ASEBA_NATIVES_STD_DESCRIPTIONS,
+	// ASEBA_NATIVES_STD_DESCRIPTIONS,
 	0
 };
 
 // Native function pointers
 static AsebaNativeFunctionPointer nativeFunctions[] = {
-	AsebaNative__system_reboot,
-	ASEBA_NATIVES_STD_FUNCTIONS,
+	AsebaNative__system_reboot
+	// ASEBA_NATIVES_STD_FUNCTIONS,
 };

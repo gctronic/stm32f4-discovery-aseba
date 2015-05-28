@@ -6,7 +6,7 @@
 
 #include "aseba_can_interface.h"
 
-#define ASEBA_CAN_SEND_QUEUE_SIZE       512
+#define ASEBA_CAN_SEND_QUEUE_SIZE       1024
 #define ASEBA_CAN_RECEIVE_QUEUE_SIZE    512
 
 
@@ -14,14 +14,14 @@ static const CANConfig can1_config = {
     .mcr = (1 << 6)  /* Automatic bus-off management enabled. */
          | (1 << 2), /* Message are prioritized by order of arrival. */
 
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
+//#if defined(BOARD_ST_STM32F4_DISCOVERY)
     /* APB Clock is 42 Mhz
        42MHz / 2 / (1tq + 12tq + 8tq) = 1MHz => 1Mbit */
     .btr = (1 << 0)  /* Baudrate prescaler (10 bits) */
          | (11 << 16)/* Time segment 1 (3 bits) */
          | (7 << 20) /* Time segment 2 (3 bits) */
          | (0 << 24) /* Resync jump width (2 bits) */
-#endif
+//#endif
 
 #if 0
          | (1 << 30) /* Loopback mode enabled */

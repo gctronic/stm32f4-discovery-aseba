@@ -15,18 +15,18 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 {
     (void)arg;
 
-    aseba_vm_init();
+    AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
     while (TRUE) {
         palTogglePad(GPIOD, GPIOD_LED6);
-        chThdSleepMilliseconds(100);
+        //chThdSleepMilliseconds(100);
 
         // Sync Aseba with the state of the Microcontroller
         update_aseba_variables_read();
 
         // Run VM for some time
-        AsebaProcessIncomingEvents(&vmState);
         AsebaVMRun(&vmState, 1000);
+        AsebaProcessIncomingEvents(&vmState);
 
         // Sync the Microcontroller with the state of Aseba
         update_aseba_variables_write();
@@ -44,17 +44,17 @@ void aseba_vm_init(void)
     vmVariables.fwversion[0] = 0;
     vmVariables.fwversion[1] = 1;
 
+    vmVariables.led = 0;
+
+    palSetPad(GPIOD, GPIOD_LED5);
+    chThdSleepMilliseconds(200);
+    palClearPad(GPIOD, GPIOD_LED5);
+    chThdSleepMilliseconds(200);
+    palSetPad(GPIOD, GPIOD_LED5);
+    chThdSleepMilliseconds(200);
+    palClearPad(GPIOD, GPIOD_LED5);
+
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
-
-    AsebaVMRun(&vmState, 10);
-
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
 }
 
 void aseba_vm_start(void)
@@ -77,4 +77,3 @@ void update_aseba_variables_write(void)
 {
 
 }
-
