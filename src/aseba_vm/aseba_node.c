@@ -25,7 +25,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
     while (TRUE) {
-        palTogglePad(GPIOD, GPIOD_LED6);
+        // Don't spin too fast to avoid consuming all CPU time
         chThdSleepMilliseconds(10);
 
         // Sync Aseba with the state of the Microcontroller
@@ -56,13 +56,7 @@ void aseba_vm_init(void)
     vmVariables.acc[1] = 0.0f;
     vmVariables.acc[2] = 0.0f;
 
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
+    chThdSleepMilliseconds(500);
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 }

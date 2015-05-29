@@ -7,7 +7,7 @@
 #include "aseba_can_interface.h"
 
 #define ASEBA_CAN_SEND_QUEUE_SIZE       1024
-#define ASEBA_CAN_RECEIVE_QUEUE_SIZE    512
+#define ASEBA_CAN_RECEIVE_QUEUE_SIZE    1024
 
 
 static const CANConfig can1_config = {
