@@ -102,8 +102,6 @@ LDSCRIPT= stm32f407xG.ld
 else
 LDSCRIPT= stm32f407xG_no_bootloader.ld
 endif
-# LDSCRIPT= stm32f407xG.ld
-LDSCRIPT= stm32f407xG_no_bootloader.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
