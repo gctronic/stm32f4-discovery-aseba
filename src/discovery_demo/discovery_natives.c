@@ -21,3 +21,21 @@ void set_led(AsebaVMState *vm)
 
     vmVariables.leds[led - 1] = brightness;
 }
+
+AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
+    "leds.clear_all",
+    "Clear all the LEDs",
+    {
+        {0, 0}
+    }
+};
+
+void clear_all_leds(AsebaVMState *vm)
+{
+    int i;
+
+    for(i = 3; i <= 6; i++) {
+        demo_led_set(i, 0);
+        vmVariables.leds[i - 1] = 0;
+    }
+}
