@@ -46,12 +46,12 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 // Native function descriptions
 static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
-	// ASEBA_NATIVES_STD_DESCRIPTIONS,
+	ASEBA_NATIVES_STD_DESCRIPTIONS,
 	0
 };
 
 // Native function pointers
 static AsebaNativeFunctionPointer nativeFunctions[] = {
-	AsebaNative__system_reboot
-	// ASEBA_NATIVES_STD_FUNCTIONS,
+	AsebaNative__system_reboot,
+	ASEBA_NATIVES_STD_FUNCTIONS,
 };
