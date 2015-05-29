@@ -75,5 +75,9 @@ void update_aseba_variables_read(void)
 // synchronisation
 void update_aseba_variables_write(void)
 {
-
+    if (vmVariables.led == 0) {
+        palClearPad(GPIOD, GPIOD_LED4);
+    } else {
+        palSetPad(GPIOD, GPIOD_LED4);
+    }
 }
