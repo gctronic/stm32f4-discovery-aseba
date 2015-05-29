@@ -9,8 +9,8 @@ typedef struct {
     float acceleration[3];
 } accelerometer_sample_t;
 
-void acc_demo_start(void);
-void acc_demo_get_acc(float *acc);
+void demo_acc_start(void);
+void demo_acc_get_acc(float *acc);
 
 #ifdef __cplusplus
 }

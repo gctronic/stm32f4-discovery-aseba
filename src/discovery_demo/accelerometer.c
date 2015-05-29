@@ -3,7 +3,7 @@
 
 #include "lis302dl.h"
 
-#include "accelerometer.h"
+#include "discovery_demo/accelerometer.h"
 
 accelerometer_sample_t  acc_sample;
 
@@ -63,7 +63,7 @@ static THD_FUNCTION(AcceleroThd, arg) {
     return 1;
 }
 
-void acc_demo_start(void)
+void demo_acc_start(void)
 {
     /*
      * Initializes the SPI driver 1 in order to access the MEMS. The signals
@@ -88,7 +88,7 @@ void acc_demo_start(void)
                       NULL);
 }
 
-void acc_demo_get_acc(float *acc)
+void demo_acc_get_acc(float *acc)
 {
     chSysLock();
     acc[0] = acc_sample.acceleration[0];

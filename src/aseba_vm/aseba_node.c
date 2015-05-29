@@ -10,7 +10,7 @@
 #include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_node.h"
 
-#include "accelerometer.h"
+#include "discovery_demo/accelerometer.h"
 
 
 void update_aseba_variables_read(void);
@@ -70,7 +70,7 @@ void aseba_vm_start(void)
 void update_aseba_variables_read(void)
 {
     static float accf[3];
-    acc_demo_get_acc(accf);
+    demo_acc_get_acc(accf);
     vmVariables.acc[0] = (sint16) accf[0];
     vmVariables.acc[1] = (sint16) accf[1];
     vmVariables.acc[2] = (sint16) accf[2];
