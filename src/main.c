@@ -7,7 +7,6 @@
 #include "chprintf.h"
 #include "shell.h"
 #include "usbcfg.h"
-#include "sensors/imu.h"
 #include "cmd.h"
 #include "aseba_vm/skel.h"
 #include "aseba_vm/aseba_node.h"
@@ -36,9 +35,7 @@ int main(void)
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
-    // imu_init();
-    // imu_start();
-
+    // Initialise Aseba CAN and VM
     aseba_vm_init();
     aseba_can_start(&vmState);
     aseba_vm_start();
