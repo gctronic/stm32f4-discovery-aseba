@@ -73,8 +73,6 @@ void can_init(void)
 #endif
 }
 
-
-
 void aseba_can_rx_dropped(void)
 {
 }
@@ -101,7 +99,7 @@ void aseba_can_send_frame(const CanFrame *frame)
     AsebaCanFrameSent();
 }
 
-// reutrns true if there is enough space to send the frame
+// Returns true if there is enough space to send the frame
 int aseba_can_is_frame_room(void)
 {
     return can_lld_is_tx_empty(&CAND1, CAN_ANY_MAILBOX);
@@ -116,23 +114,3 @@ void aseba_can_start(AsebaVMState *vm_state)
                 aseba_can_send_queue, ASEBA_CAN_SEND_QUEUE_SIZE,
                 aseba_can_receive_queue, ASEBA_CAN_RECEIVE_QUEUE_SIZE);
 }
-
-
-
-
-
-
-
-/*
- * For Aseba Can init
- * bool can_send_frame(can_frame):
- *   return true if there was enough space (success sensing frame)
- *   return false otherwise
- * isFrameRoomFP:
- *   need a function that returns a bool
- *   true if there is enough space to send the frame
- *   false otherwise (buffer full)
- * drop packet handling:
- *   empty functions
- * AsebaCanFrameSend / Recv see comments in header file
- */
