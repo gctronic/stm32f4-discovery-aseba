@@ -43,7 +43,7 @@ struct _vmVariables {
 	sint16 productId;					// Product ID
 
 	// Variables
-	bool led;
+	uint16 leds[6];
 	sint16 acc[3];
 
 	// Free space
@@ -53,11 +53,8 @@ struct _vmVariables {
 
 enum Events
 {
-	/****
-	---> PUT YOUR EVENT NUMBER HERE <---
-	Must be in the same order as in skel.c
-	****/
-	EVENTS_COUNT // Do not touch
+	EVENT_ACC = 0, // New accelerometer measurement
+	EVENTS_COUNT   // Do not touch
 };
 
 // The content of this structure is implementation-specific.

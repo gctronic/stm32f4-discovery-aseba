@@ -11,6 +11,7 @@
 #include "aseba_vm/aseba_node.h"
 
 #include "discovery_demo/accelerometer.h"
+#include "discovery_demo/leds.h"
 
 
 void update_aseba_variables_read(void);
@@ -51,7 +52,13 @@ void aseba_vm_init(void)
     vmVariables.fwversion[0] = 0;
     vmVariables.fwversion[1] = 1;
 
-    vmVariables.led = 0;
+    vmVariables.leds[0] = 0;
+    vmVariables.leds[1] = 0;
+    vmVariables.leds[2] = 0;
+    vmVariables.leds[3] = 0;
+    vmVariables.leds[4] = 0;
+    vmVariables.leds[5] = 0;
+
     vmVariables.acc[0] = 0.0f;
     vmVariables.acc[1] = 0.0f;
     vmVariables.acc[2] = 0.0f;
@@ -74,14 +81,11 @@ void update_aseba_variables_read(void)
     vmVariables.acc[0] = (sint16) accf[0];
     vmVariables.acc[1] = (sint16) accf[1];
     vmVariables.acc[2] = (sint16) accf[2];
+    SET_EVENT(EVENT_ACC);
 }
 
 // This function must update the microcontrolleur state to match the variables
 void update_aseba_variables_write(void)
 {
-    if (vmVariables.led == 0) {
-        palClearPad(GPIOD, GPIOD_LED4);
-    } else {
-        palSetPad(GPIOD, GPIOD_LED4);
-    }
+
 }
