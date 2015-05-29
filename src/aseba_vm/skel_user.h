@@ -44,6 +44,7 @@ struct _vmVariables {
 
 	// Variables
 	bool led;
+	sint16 acc[3];
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];

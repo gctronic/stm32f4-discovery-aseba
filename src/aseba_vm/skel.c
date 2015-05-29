@@ -10,8 +10,8 @@
 #include "common/consts.h"
 #include "transport/buffer/vm-buffer.h"
 
-#include "skel.h"
-#include "skel_user.c"
+#include "aseba_vm/skel.h"
+#include "aseba_vm/skel_user.c"
 
 unsigned int events_flags = 0;
 

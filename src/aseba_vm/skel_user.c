@@ -1,7 +1,7 @@
 #include "ch.h"
 #include "hal.h"
 
-#include "skel.h"
+#include "aseba_vm/skel.h"
 #include "vm/natives.h"
 
 /*
@@ -17,7 +17,8 @@ const AsebaVMDescription vmDescription = {
 		{2, "_fwversion"},
 		{1, "_productId"},
 
-		{1, "led"},
+        {1, "led"},
+        {3, "acc"},
 
 		{0, NULL}
 	}

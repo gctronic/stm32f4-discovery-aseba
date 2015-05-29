@@ -6,9 +6,16 @@
 #include "common/consts.h"
 #include "common/productids.h"
 #include "vm/vm.h"
-#include "skel.h"
-#include "skel_user.h"
-#include "aseba_node.h"
+#include "aseba_vm/skel.h"
+#include "aseba_vm/skel_user.h"
+#include "aseba_vm/aseba_node.h"
+
+#include "accelerometer.h"
+
+
+void update_aseba_variables_read(void);
+void update_aseba_variables_write(void);
+sint16 aseba_float_to_int(float var, float max);
 
 static THD_WORKING_AREA(aseba_vm_thd_wa, 1024);
 static THD_FUNCTION(aseba_vm_thd, arg)
@@ -45,6 +52,9 @@ void aseba_vm_init(void)
     vmVariables.fwversion[1] = 1;
 
     vmVariables.led = 0;
+    vmVariables.acc[0] = 0.0f;
+    vmVariables.acc[1] = 0.0f;
+    vmVariables.acc[2] = 0.0f;
 
     palSetPad(GPIOD, GPIOD_LED5);
     chThdSleepMilliseconds(200);
@@ -63,16 +73,16 @@ void aseba_vm_start(void)
 }
 
 // This function must update the variable to match the microcontroller state
-// It is called _BEFORE_ running the VM, so it's a {Microcontroller state} -> {Aseba Variable}
-// synchronisation
 void update_aseba_variables_read(void)
 {
-
+    static float accf[3];
+    acc_demo_get_acc(accf);
+    vmVariables.acc[0] = (sint16) accf[0];
+    vmVariables.acc[1] = (sint16) accf[1];
+    vmVariables.acc[2] = (sint16) accf[2];
 }
 
 // This function must update the microcontrolleur state to match the variables
-// It is called _AFTER_ running the VM, so it's a {Aseba Variables} -> {Microcontroller state}
-// synchronisation
 void update_aseba_variables_write(void)
 {
     if (vmVariables.led == 0) {
