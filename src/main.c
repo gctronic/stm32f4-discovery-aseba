@@ -8,7 +8,10 @@
 #include "shell.h"
 #include "usbcfg.h"
 #include "cmd.h"
+
 #include "discovery_demo/accelerometer.h"
+#include "discovery_demo/leds.h"
+
 #include "aseba_vm/skel.h"
 #include "aseba_vm/aseba_node.h"
 #include "aseba_vm/aseba_can_interface.h"
@@ -36,8 +39,9 @@ int main(void)
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
-    // Initialise Discovery board accelerometer
+    // Initialise Discovery board demo setup
     demo_acc_start();
+    demo_led_init();
 
     // Initialise Aseba CAN and VM
     aseba_vm_init();
