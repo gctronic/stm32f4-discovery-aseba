@@ -16,10 +16,9 @@
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
 
-
 int main(void)
 {
-    //thread_t *shelltp = NULL;
+    thread_t *shelltp = NULL;
 
     halInit();
     chSysInit();
@@ -37,24 +36,21 @@ int main(void)
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
-    imu_init();
-    imu_start();
+    // imu_init();
+    // imu_start();
 
     aseba_vm_init();
     aseba_can_start(&vmState);
     aseba_vm_start();
 
-    /*
     shellInit();
 
     static const ShellConfig shell_cfg1 = {
         (BaseSequentialStream *)&SDU1,
         shell_commands
     };
-    */
 
     while (TRUE) {
-    /*
         if (!shelltp) {
             if (SDU1.config->usbp->state == USB_ACTIVE) {
                 shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);
@@ -65,7 +61,6 @@ int main(void)
                 shelltp = NULL;
             }
         }
-    */
         chThdSleepMilliseconds(500);
     }
 

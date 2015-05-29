@@ -19,7 +19,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 
     while (TRUE) {
         palTogglePad(GPIOD, GPIOD_LED6);
-        //chThdSleepMilliseconds(100);
+        chThdSleepMilliseconds(10);
 
         // Sync Aseba with the state of the Microcontroller
         update_aseba_variables_read();
@@ -59,7 +59,7 @@ void aseba_vm_init(void)
 
 void aseba_vm_start(void)
 {
-    chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), NORMALPRIO, aseba_vm_thd, NULL);
+    chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), LOWPRIO, aseba_vm_thd, NULL);
 }
 
 // This function must update the variable to match the microcontroller state
