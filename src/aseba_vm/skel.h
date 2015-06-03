@@ -25,8 +25,8 @@ extern char aseba_byte_code_container[VM_BYTECODE_SIZE];
  * In your code, put "SET_EVENT(EVENT_NUMBER)" when you want to trigger an
  * event. This macro is interrupt-safe, you can call it anywhere you want.
  */
-#define SET_EVENT(event) atomic_or(&events_flags, 1 << event)
-#define CLEAR_EVENT(event) atomic_and(&events_flags, ~(1 << event))
+#define SET_EVENT(event) (events_flags |= (1 << event))
+#define CLEAR_EVENT(event) (events_flags &= ~(1 << event))
 #define IS_EVENT(event) (events_flags & (1 << event))
 
 /*

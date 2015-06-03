@@ -24,7 +24,7 @@ extern "C" {
 #define VM_VARIABLES_FREE_SPACE 256
 
 /*
- * This is the maximum number of argument an aseba event can recieve
+ * This is the maximum number of argument an aseba event can receive
  */
 #define VM_VARIABLES_ARG_SIZE 32
 
@@ -32,17 +32,18 @@ extern "C" {
  * The number of opcode an aseba script can have
  */
 #define VM_BYTECODE_SIZE (766 + 768)  // PUT HERE 766 + 768 * a, where a is >= 0
-#define VM_STACK_SIZE 32
+#define VM_STACK_SIZE 128
 
 
 struct _vmVariables {
 	sint16 id; 							// NodeID
 	sint16 source; 						// Source
 	sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
+	sint16 fwversion[2];				// Firmware version
 	sint16 productId;					// Product ID
 
 	// Variables
-	uint16 led;
+	bool led;
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
@@ -51,8 +52,6 @@ struct _vmVariables {
 
 enum Events
 {
-	YOUR_FIRST_EVENT = 0,
-	YOUR_SECOND_EVENT,
 	/****
 	---> PUT YOUR EVENT NUMBER HERE <---
 	Must be in the same order as in skel.c
@@ -67,8 +66,7 @@ enum Events
 struct private_settings {
 	/* ADD here the settings to save into flash */
 	/* The minimum size is one integer, the maximum size is 95 integer (Check done at compilation) */
-	int first_setting;
-	int second_setting;
+	int settings[95];
 };
 
 

@@ -6,7 +6,7 @@
 
 #include "aseba_can_interface.h"
 
-#define ASEBA_CAN_SEND_QUEUE_SIZE       512
+#define ASEBA_CAN_SEND_QUEUE_SIZE       1024
 #define ASEBA_CAN_RECEIVE_QUEUE_SIZE    512
 
 
@@ -14,14 +14,14 @@ static const CANConfig can1_config = {
     .mcr = (1 << 6)  /* Automatic bus-off management enabled. */
          | (1 << 2), /* Message are prioritized by order of arrival. */
 
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
+//#if defined(BOARD_ST_STM32F4_DISCOVERY)
     /* APB Clock is 42 Mhz
        42MHz / 2 / (1tq + 12tq + 8tq) = 1MHz => 1Mbit */
     .btr = (1 << 0)  /* Baudrate prescaler (10 bits) */
          | (11 << 16)/* Time segment 1 (3 bits) */
          | (7 << 20) /* Time segment 2 (3 bits) */
          | (0 << 24) /* Resync jump width (2 bits) */
-#endif
+//#endif
 
 #if 0
          | (1 << 30) /* Loopback mode enabled */
@@ -73,8 +73,6 @@ void can_init(void)
 #endif
 }
 
-
-
 void aseba_can_rx_dropped(void)
 {
 }
@@ -97,9 +95,11 @@ void aseba_can_send_frame(const CanFrame *frame)
     }
 
     canTransmit(&CAND1, CAN_ANY_MAILBOX, &txf, MS2ST(100));
+    chThdSleepMilliseconds(1);
+    AsebaCanFrameSent();
 }
 
-// reutrns true if there is enough space to send the frame
+// Returns true if there is enough space to send the frame
 int aseba_can_is_frame_room(void)
 {
     return can_lld_is_tx_empty(&CAND1, CAN_ANY_MAILBOX);
@@ -114,23 +114,3 @@ void aseba_can_start(AsebaVMState *vm_state)
                 aseba_can_send_queue, ASEBA_CAN_SEND_QUEUE_SIZE,
                 aseba_can_receive_queue, ASEBA_CAN_RECEIVE_QUEUE_SIZE);
 }
-
-
-
-
-
-
-
-/*
- * For Aseba Can init
- * bool can_send_frame(can_frame):
- *   return true if there was enough space (success sensing frame)
- *   return false otherwise
- * isFrameRoomFP:
- *   need a function that returns a bool
- *   true if there is enough space to send the frame
- *   false otherwise (buffer full)
- * drop packet handling:
- *   empty functions
- * AsebaCanFrameSend / Recv see comments in header file
- */

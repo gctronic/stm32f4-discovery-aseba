@@ -3,7 +3,7 @@
 # NOTE: Can be overridden externally.
 #
 
-USE_ASEBA_BOOTLOADER = yes
+USE_ASEBA_BOOTLOADER = no
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
