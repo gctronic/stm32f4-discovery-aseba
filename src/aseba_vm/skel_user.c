@@ -1,8 +1,8 @@
 #include "ch.h"
 #include "hal.h"
 
-#include "skel.h"
 #include "vm/natives.h"
+#include "discovery_demo/discovery_natives.h"
 
 /*
  * Descriptors
@@ -17,7 +17,8 @@ const AsebaVMDescription vmDescription = {
 		{2, "_fwversion"},
 		{1, "_productId"},
 
-		{1, "led"},
+        {6, "leds"},
+        {3, "acc"},
 
 		{0, NULL}
 	}
@@ -25,10 +26,11 @@ const AsebaVMDescription vmDescription = {
 
 // Event descriptions
 static const AsebaLocalEventDescription localEvents[] = {
+    {"new_acc", "New accelerometer measurement"},
 	{NULL, NULL}
 };
 
-
+// Native functions
 static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
 {
     "_system.reboot",
@@ -46,12 +48,14 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 // Native function descriptions
 static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
-	ASEBA_NATIVES_STD_DESCRIPTIONS,
-	0
+    ASEBA_NATIVES_STD_DESCRIPTIONS,
+    DISCOVERY_NATIVES_DESCRIPTIONS,
+    0
 };
 
 // Native function pointers
 static AsebaNativeFunctionPointer nativeFunctions[] = {
-	AsebaNative__system_reboot,
+    AsebaNative__system_reboot,
 	ASEBA_NATIVES_STD_FUNCTIONS,
+    DISCOVERY_NATIVES_FUNCTIONS
 };

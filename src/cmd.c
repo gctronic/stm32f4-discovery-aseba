@@ -5,7 +5,6 @@
 #include "chprintf.h"
 #include "shell.h"
 #include "usbcfg.h"
-#include "sensors/imu.h"
 #include "chtm.h"
 #include "common/types.h"
 #include "vm/natives.h"
@@ -64,29 +63,6 @@ static void cmd_test(BaseSequentialStream *chp, int argc, char *argv[])
         return;
     }
     chThdWait(tp);
-}
-
-extern int proximity_main(void);
-
-static void cmd_adctest(BaseSequentialStream *chp, int argc, char *argv[])
-{
-    (void)argc;
-    (void)argv;
-    static int analog_input;
-    analog_input=proximity_main();
-    chprintf(chp, "adctest value: %i", analog_input);
-}
-
-
-static void cmd_mpu6050(BaseSequentialStream *chp, int argc, char *argv[])
-{
-    (void)argc;
-    (void)argv;
-    float acc[3];
-    float gyro[3];
-    imu_get_gyro(gyro);
-    imu_get_acc(acc);
-    chprintf(chp, "gyro: %f %f %f, acc %f %f %f\n", gyro[0], gyro[1], gyro[2], acc[0], acc[1], acc[2]);
 }
 
 static void cmd_readclock(BaseSequentialStream *chp, int argc, char *argv[])
@@ -180,8 +156,6 @@ const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
     {"test", cmd_test},
-    {"adctest", cmd_adctest},
-    {"mpu6050", cmd_mpu6050},
     {"clock", cmd_readclock},
     {"sqrt", cmd_sqrt},
     {"atan2", cmd_atan2},

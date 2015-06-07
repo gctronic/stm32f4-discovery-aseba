@@ -6,9 +6,17 @@
 #include "common/consts.h"
 #include "common/productids.h"
 #include "vm/vm.h"
-#include "skel.h"
-#include "skel_user.h"
-#include "aseba_node.h"
+#include "aseba_vm/skel.h"
+#include "aseba_vm/skel_user.h"
+#include "aseba_vm/aseba_node.h"
+
+#include "discovery_demo/accelerometer.h"
+#include "discovery_demo/leds.h"
+
+
+void update_aseba_variables_read(void);
+void update_aseba_variables_write(void);
+sint16 aseba_float_to_int(float var, float max);
 
 static THD_WORKING_AREA(aseba_vm_thd_wa, 1024);
 static THD_FUNCTION(aseba_vm_thd, arg)
@@ -18,7 +26,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
     while (TRUE) {
-        palTogglePad(GPIOD, GPIOD_LED6);
+        // Don't spin too fast to avoid consuming all CPU time
         chThdSleepMilliseconds(10);
 
         // Sync Aseba with the state of the Microcontroller
@@ -44,15 +52,18 @@ void aseba_vm_init(void)
     vmVariables.fwversion[0] = 0;
     vmVariables.fwversion[1] = 1;
 
-    vmVariables.led = 0;
+    vmVariables.leds[0] = 0;
+    vmVariables.leds[1] = 0;
+    vmVariables.leds[2] = 0;
+    vmVariables.leds[3] = 0;
+    vmVariables.leds[4] = 0;
+    vmVariables.leds[5] = 0;
 
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palSetPad(GPIOD, GPIOD_LED5);
-    chThdSleepMilliseconds(200);
-    palClearPad(GPIOD, GPIOD_LED5);
+    vmVariables.acc[0] = 0.0f;
+    vmVariables.acc[1] = 0.0f;
+    vmVariables.acc[2] = 0.0f;
+
+    chThdSleepMilliseconds(500);
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 }
@@ -63,16 +74,17 @@ void aseba_vm_start(void)
 }
 
 // This function must update the variable to match the microcontroller state
-// It is called _BEFORE_ running the VM, so it's a {Microcontroller state} -> {Aseba Variable}
-// synchronisation
 void update_aseba_variables_read(void)
 {
-
+    static float accf[3];
+    demo_acc_get_acc(accf);
+    vmVariables.acc[0] = (sint16) accf[0];
+    vmVariables.acc[1] = (sint16) accf[1];
+    vmVariables.acc[2] = (sint16) accf[2];
+    SET_EVENT(EVENT_ACC);
 }
 
 // This function must update the microcontrolleur state to match the variables
-// It is called _AFTER_ running the VM, so it's a {Aseba Variables} -> {Microcontroller state}
-// synchronisation
 void update_aseba_variables_write(void)
 {
 
