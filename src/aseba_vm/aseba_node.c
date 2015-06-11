@@ -3,9 +3,11 @@
 #include "chprintf.h"
 #include "usbcfg.h"
 
+#include "common/types.h"
 #include "common/consts.h"
 #include "common/productids.h"
 #include "vm/vm.h"
+#include "transport/buffer/vm-buffer.h"
 #include "aseba_vm/skel.h"
 #include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_node.h"
