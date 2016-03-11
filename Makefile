@@ -7,6 +7,8 @@ USE_ASEBA_BOOTLOADER = no
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
+# ORG :  USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
+# but modified by DBR :
   USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
   USE_OPT += -lm # To use math.h
   USE_OPT += -fno-strict-aliasing # This is only for Aseba because it doesn't respect the C aliasing rules
