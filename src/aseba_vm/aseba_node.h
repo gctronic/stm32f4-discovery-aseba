@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void aseba_vm_start(void);
+void accelerometer_cb(void);
 
 #ifdef __cplusplus
 }

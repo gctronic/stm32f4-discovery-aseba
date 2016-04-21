@@ -40,13 +40,15 @@ int main(void)
     usbConnectBus(serusbcfg.usbp);
 
     // Initialise Discovery board demo setup
-    demo_acc_start();
+//    demo_acc_start();
     demo_led_init();
 
     // Initialise Aseba CAN and VM
     aseba_vm_init();
     aseba_can_start(&vmState);
     aseba_vm_start();
+
+    demo_acc_start(&accelerometer_cb);
 
     shellInit();
 

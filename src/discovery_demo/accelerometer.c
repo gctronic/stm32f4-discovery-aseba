@@ -6,6 +6,7 @@
 #include "discovery_demo/accelerometer.h"
 
 accelerometer_sample_t  acc_sample;
+accelerometer_callback acc_callback;
 
 /*
  * SPI1 configuration structure.
@@ -32,9 +33,11 @@ static THD_FUNCTION(AcceleroThd, arg) {
     chRegSetThreadName("Accelerometer");
 
     /* Reader thread loop.*/
-    time = chVTGetSystemTime();
+//    time = chVTGetSystemTime();
     while (TRUE) {
         unsigned i;
+
+        time = chVTGetSystemTime();
 
         /* Keeping an history of the latest four accelerometer readings.*/
         for (i = 3; i > 0; i--) {
@@ -56,20 +59,24 @@ static THD_FUNCTION(AcceleroThd, arg) {
         acc_sample.acceleration[2] =
             ((int32_t)zbuf[0] + (int32_t)zbuf[1] + (int32_t)zbuf[2] + (int32_t)zbuf[3]) / 4;
 
+        acc_callback();
+
         /* Waiting until the next 100 milliseconds time interval.*/
-        chThdSleepUntil(time += MS2ST(100));
+        // chThdSleepUntil(time += MS2ST(100));
+        chThdSleepUntilWindowed(time, time += MS2ST(100));
     }
 
     return 1;
 }
 
-void demo_acc_start(void)
+void demo_acc_start(accelerometer_callback callback)
 {
     /*
      * Initializes the SPI driver 1 in order to access the MEMS. The signals
      * are already initialized in the board file.
      */
     spiStart(&SPID1, &spi1cfg);
+    acc_callback = callback;
 
     chThdSleepMilliseconds(500);
 

@@ -8,7 +8,7 @@
  * Descriptors
  */
 const AsebaVMDescription vmDescription = {
-	"Epuck2",
+	"Epuck2-B",
 	{
 		// {Number of element in array, Name displayed in aseba studio}
 		{1, "_id"},
