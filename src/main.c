@@ -16,6 +16,7 @@
 #include "aseba_vm/skel.h"
 #include "aseba_vm/aseba_node.h"
 #include "aseba_vm/aseba_can_interface.h"
+#include "aseba_vm/aseba_bridge.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -41,13 +42,20 @@ int main(void)
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
-    // Initialise Discovery board demo setup
-    demo_led_init();
 
     // Initialise Aseba CAN and VM
     aseba_vm_init();
     aseba_can_start(&vmState);
+#if 0
+    // Initialise Discovery board demo setup
+    demo_led_init();
     aseba_vm_start();
+#else
+    aseba_bridge((BaseSequentialStream *)&SDU1);
+    while (true) {
+        chThdSleepMilliseconds(100);
+    }
+#endif
 
     demo_acc_start(&accelerometer_cb);
 
