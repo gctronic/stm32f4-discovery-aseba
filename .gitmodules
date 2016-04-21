@@ -4,21 +4,6 @@
 [submodule "aseba"]
 	path = aseba
 	url = https://github.com/epuck2/aseba
-[submodule "src/cmp_mem_access"]
-	path = src/cmp_mem_access
-	url = https://github.com/epuck2/cmp_mem_access.git
-[submodule "src/cmp"]
-	path = src/cmp
-	url = https://github.com/epuck2/cmp
-[submodule "src/serial-datagram"]
-	path = src/serial-datagram
-	url = https://github.com/epuck2/serial-datagram.git
-[submodule "src/crc"]
-	path = src/crc
-	url = https://github.com/epuck2/crc
-[submodule "src/serial-can-bridge"]
-	path = src/serial-can-bridge
-	url = https://github.com/cvra/serial-can-bridge
 [submodule "aseba-bootloader/libopencm3"]
 	path = aseba-bootloader/libopencm3
 	url = https://github.com/libopencm3/libopencm3.git
