@@ -32,6 +32,7 @@ AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
 
 void clear_all_leds(AsebaVMState *vm)
 {
+    (void) vm;
     int i;
 
     for(i = 3; i <= 6; i++) {

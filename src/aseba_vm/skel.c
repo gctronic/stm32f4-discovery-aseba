@@ -24,16 +24,18 @@ static uint16 vmBytecode[VM_BYTECODE_SIZE];
 static sint16 vmStack[VM_STACK_SIZE];
 
 AsebaVMState vmState = {
-    0,
+    .nodeId=0, /* changed by aseba_vm_init() */
 
-    VM_BYTECODE_SIZE,
-    vmBytecode,
+    .bytecodeSize=VM_BYTECODE_SIZE,
+    .bytecode=vmBytecode,
 
-    sizeof(vmVariables) / sizeof(sint16),
-    (sint16*)&vmVariables,
+    .variablesSize=sizeof(vmVariables) / sizeof(sint16),
+    .variables=(sint16*)&vmVariables,
 
-    VM_STACK_SIZE,
-    vmStack
+    .stackSize=VM_STACK_SIZE,
+    .stack=vmStack,
+    .flags=0, .pc=0, .sp=0,
+    .breakpoints={0}, .breakpointsCount=0,
 };
 
 
@@ -47,11 +49,13 @@ void AsebaIdle(void)
 
 void AsebaPutVmToSleep(AsebaVMState *vm)
 {
+    (void) vm;
     chThdSleepMilliseconds(1000);
 }
 
 void AsebaResetIntoBootloader(AsebaVMState *vm)
 {
+    (void) vm;
     NVIC_SystemReset();
 }
 
@@ -62,17 +66,20 @@ void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
 
 const AsebaNativeFunctionDescription * const * AsebaGetNativeFunctionsDescriptions(AsebaVMState *vm)
 {
+    (void) vm;
     return nativeFunctionsDescription;
 }
 
 
 const AsebaVMDescription* AsebaGetVMDescription(AsebaVMState *vm)
 {
+    (void) vm;
     return &vmDescription;
 }
 
 const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState *vm)
 {
+    (void) vm;
     return localEvents;
 }
 
@@ -84,5 +91,7 @@ uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
 // Used to write bytecode in the flash, not implemented yet
 void AsebaWriteBytecode(AsebaVMState *vm)
 {
+    (void) vm;
+#warning "Not implemented yet"
 
 }
