@@ -10,29 +10,13 @@
 #define ASEBA_CAN_RECEIVE_QUEUE_SIZE    1024
 
 
-static const CANConfig can1_config = {
-    .mcr = (1 << 6)  /* Automatic bus-off management enabled. */
-         | (1 << 2), /* Message are prioritized by order of arrival. */
-
-//#if defined(BOARD_ST_STM32F4_DISCOVERY)
-    /* APB Clock is 42 Mhz
-       42MHz / 2 / (1tq + 12tq + 8tq) = 1MHz => 1Mbit */
-    .btr = (1 << 0)  /* Baudrate prescaler (10 bits) */
-         | (11 << 16)/* Time segment 1 (3 bits) */
-         | (7 << 20) /* Time segment 2 (3 bits) */
-         | (0 << 24) /* Resync jump width (2 bits) */
-//#endif
-
-#if 0
-         | (1 << 30) /* Loopback mode enabled */
-#endif
-};
 
 CanFrame aseba_can_send_queue[ASEBA_CAN_SEND_QUEUE_SIZE];
 CanFrame aseba_can_receive_queue[ASEBA_CAN_RECEIVE_QUEUE_SIZE];
 
 static THD_WORKING_AREA(can_rx_thread_wa, 256);
-static THD_FUNCTION(can_rx_thread, arg) {
+static THD_FUNCTION(can_rx_thread, arg)
+{
     (void)arg;
     chRegSetThreadName("CAN rx");
     while (1) {
@@ -61,16 +45,28 @@ static THD_FUNCTION(can_rx_thread, arg) {
 
 void can_init(void)
 {
-#if defined(BOARD_ST_STM32F4_DISCOVERY)
+
+    static const CANConfig can1_config = {
+        .mcr = (1 << 6)  /* Automatic bus-off management enabled. */
+            | (1 << 2), /* Message are prioritized by order of arrival. */
+
+        /* APB Clock is 42 Mhz
+           42MHz / 2 / (1tq + 12tq + 8tq) = 1MHz => 1Mbit */
+        .btr = (1 << 0)  /* Baudrate prescaler (10 bits) */
+            | (11 << 16)/* Time segment 1 (3 bits) */
+            | (7 << 20) /* Time segment 2 (3 bits) */
+            | (0 << 24) /* Resync jump width (2 bits) */
+    };
+
     // CAN1 gpio init
+    // Cant go in the board.h for the discovery, as it is a general purpose
+    // board
     iomode_t mode = PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL
         | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUDR_FLOATING
         | PAL_STM32_ALTERNATE(9);
     palSetPadMode(GPIOD, GPIOD_PIN0, mode); // RX
     palSetPadMode(GPIOD, GPIOD_PIN1, mode); // TX
     canStart(&CAND1, &can1_config);
-    // canSTM32SetFilters(uint32_t can2sb, uint32_t num, const CANFilter *cfp);
-#endif
 }
 
 void aseba_can_rx_dropped(void)

@@ -18,4 +18,4 @@ To start the shell, open a terminal emulator and run
 ```bash
 sudo python -m serial.tools.miniterm /dev/ttyACM0
 ```
- assuming `/dev/ttyACM0` is where the epuck is connected
+ assuming `/dev/ttyACM0` is where the discovery is connected
