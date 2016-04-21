@@ -44,7 +44,7 @@ AsebaVMState vmState = {
  */
 void AsebaIdle(void)
 {
-    chThdSleepMilliseconds(1);
+    chThdYield();
 }
 
 void AsebaPutVmToSleep(AsebaVMState *vm)
@@ -92,6 +92,5 @@ uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
 void AsebaWriteBytecode(AsebaVMState *vm)
 {
     (void) vm;
-#warning "Not implemented yet"
-
+	AsebaVMEmitNodeSpecificError(vm, "Not implemented yet.");
 }

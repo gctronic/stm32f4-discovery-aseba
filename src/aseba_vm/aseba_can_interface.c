@@ -91,7 +91,7 @@ void aseba_can_send_frame(const CanFrame *frame)
     }
 
     canTransmit(&CAND1, CAN_ANY_MAILBOX, &txf, MS2ST(100));
-    chThdSleepMilliseconds(1);
+    while (!can_lld_is_tx_empty(&CAND1, CAN_ANY_MAILBOX)) { }
     AsebaCanFrameSent();
 }
 

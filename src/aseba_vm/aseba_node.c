@@ -32,7 +32,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 
     while (TRUE) {
         // Don't spin too fast to avoid consuming all CPU time
-        chThdSleepMilliseconds(1);
+        chThdYield();
 
         // Sync Aseba with the state of the Microcontroller
         update_aseba_variables_read();

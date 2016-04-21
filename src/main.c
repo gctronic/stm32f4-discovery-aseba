@@ -42,7 +42,6 @@ int main(void)
     usbConnectBus(serusbcfg.usbp);
 
     // Initialise Discovery board demo setup
-//    demo_acc_start();
     demo_led_init();
 
     // Initialise Aseba CAN and VM
@@ -72,5 +71,4 @@ int main(void)
         }
         chThdSleepMilliseconds(500);
     }
-
 }
