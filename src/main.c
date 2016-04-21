@@ -8,6 +8,7 @@
 #include "shell.h"
 #include "usbcfg.h"
 #include "cmd.h"
+#include "malloc_lock.h"
 
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
@@ -25,6 +26,7 @@ int main(void)
 
     halInit();
     chSysInit();
+    malloc_lock_init();
 
     // UART2 on PA2(TX) and PA3(RX)
     sdStart(&SD2, NULL);
