@@ -67,6 +67,8 @@ struct private_settings {
 	int settings[95];
 };
 
+void set_board_name(const char *name);
+
 
 #ifdef __cplusplus
 }

@@ -2,6 +2,9 @@
 #include "hal.h"
 #include "chprintf.h"
 #include "usbcfg.h"
+#include "unique_id.h"
+#include <strings.h>
+#include <stdio.h>
 
 #include "common/types.h"
 #include "common/consts.h"
@@ -91,9 +94,30 @@ static THD_FUNCTION(aseba_vm_thd, arg)
     return 0;
 }
 
+
+/** Returns a more or less unique node ID.*/
+static uint16_t get_unique_id(void)
+{
+    uint8_t chip_id[UNIQUE_ID_SIZE];
+    uint8_t res = 0;
+    int i;
+
+    unique_id_read(chip_id);
+
+    for (i = 0; i < UNIQUE_ID_SIZE; i++) {
+        res += chip_id[i];
+    }
+
+    return res;
+}
+
 void aseba_vm_init(void)
 {
-    vmState.nodeId = 4;
+    char name[32];
+    vmState.nodeId = get_unique_id();
+
+    sprintf(name, "Discovery %d", vmState.nodeId);
+    set_board_name(name);
 
     AsebaVMInit(&vmState);
     vmVariables.id = vmState.nodeId;
