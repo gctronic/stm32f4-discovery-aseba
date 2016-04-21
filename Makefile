@@ -235,4 +235,4 @@ RULESPATH = .
 include $(RULESPATH)/rules.mk
 
 flash: build/$(PROJECT).elf
-	openocd -f oocd.cfg -c "program build/ch.elf verify reset"
+	openocd -f oocd.cfg -c "program build/ch.elf verify reset exit"
