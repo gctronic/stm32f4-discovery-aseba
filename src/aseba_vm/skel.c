@@ -85,7 +85,8 @@ const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState 
 
 uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
 {
-    return AsebaVMShouldDropPacket(&vmState, source, data);
+    //return AsebaVMShouldDropPacket(&vmState, source, data);
+    return 0;
 }
 
 // Used to write bytecode in the flash, not implemented yet
