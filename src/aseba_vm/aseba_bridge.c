@@ -39,7 +39,7 @@ static msg_t aseba_bridge_uart_to_can(void *p)
 
         palTogglePad(GPIOD, GPIOD_LED3);
 
-        AsebaCanSendSpecificSource(data, length.u16, source.u16);
+        AsebaCanSendSpecificSource(data, length.u16 + 2, source.u16);
     }
 
     return MSG_OK;
