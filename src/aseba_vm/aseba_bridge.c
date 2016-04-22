@@ -6,8 +6,11 @@
 #include "common/consts.h"
 #include "chprintf.h"
 
+static bool is_bridge = false;
+
 static msg_t aseba_bridge_uart_to_can(void *p);
 static msg_t aseba_bridge_can_to_uart(void *p);
+static msg_t led_thread(void *p);
 
 typedef union {
     uint8_t u8[2];
@@ -16,6 +19,7 @@ typedef union {
 
 void aseba_bridge(BaseSequentialStream *stream)
 {
+    is_bridge = true;
     static THD_WORKING_AREA(uart_to_can_wa, 1024);
     chThdCreateStatic(uart_to_can_wa, sizeof(uart_to_can_wa), NORMALPRIO,
                       aseba_bridge_uart_to_can, (void *)stream);
@@ -23,6 +27,10 @@ void aseba_bridge(BaseSequentialStream *stream)
     static THD_WORKING_AREA(can_to_uart_wa, 1024);
     chThdCreateStatic(can_to_uart_wa, sizeof(can_to_uart_wa), NORMALPRIO,
                       aseba_bridge_can_to_uart, (void *)stream);
+
+    static THD_WORKING_AREA(led_thread_wa, 256);
+    chThdCreateStatic(led_thread_wa, sizeof(led_thread_wa), NORMALPRIO,
+                      led_thread, NULL);
 }
 
 static msg_t aseba_bridge_uart_to_can(void *p)
@@ -73,4 +81,22 @@ static msg_t aseba_bridge_can_to_uart(void *p)
     }
 
     return MSG_OK;
+}
+
+static msg_t led_thread(void *p)
+{
+    (void) p;
+    while (true) {
+        palSetPad(GPIOD, GPIOD_LED6);
+        chThdSleepMilliseconds(300);
+        palClearPad(GPIOD, GPIOD_LED6);
+        chThdSleepMilliseconds(300);
+    }
+
+    return MSG_OK;
+}
+
+bool aseba_is_bridge(void)
+{
+    return is_bridge;
 }

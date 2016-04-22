@@ -50,16 +50,18 @@ int main(void)
     // Initialise Aseba CAN and VM
     aseba_vm_init();
     aseba_can_start(&vmState);
-#if 0
-    // Initialise Discovery board demo setup
-    demo_led_init();
-    aseba_vm_start();
-#else
-    aseba_bridge((BaseSequentialStream *)&SDU1);
-    while (true) {
-        chThdSleepMilliseconds(100);
+
+    /* If button is pressed, start in translator mode. */
+    if (palReadPad(GPIOA, GPIOA_BUTTON)) {
+        aseba_bridge((BaseSequentialStream *)&SDU1);
+        while (true) {
+            chThdSleepMilliseconds(100);
+        }
+    } else {
+        // Initialise Discovery board demo setup
+        demo_led_init();
+        aseba_vm_start();
     }
-#endif
 
     demo_acc_start(&accelerometer_cb);
 

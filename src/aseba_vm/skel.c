@@ -12,6 +12,7 @@
 
 #include "aseba_vm/skel.h"
 #include "aseba_vm/skel_user.c"
+#include "aseba_vm/aseba_bridge.h"
 
 unsigned int events_flags = 0;
 
@@ -85,8 +86,12 @@ const AsebaLocalEventDescription * AsebaGetLocalEventsDescriptions(AsebaVMState 
 
 uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
 {
-    //return AsebaVMShouldDropPacket(&vmState, source, data);
-    return 0;
+    /* Accept all packets in bridge mode. */
+    if (aseba_is_bridge()) {
+        return 0;
+    }
+
+    return AsebaVMShouldDropPacket(&vmState, source, data);
 }
 
 // Used to write bytecode in the flash, not implemented yet
