@@ -1,5 +1,6 @@
 #include "hal.h"
 #include "aseba_bridge.h"
+#include "aseba_can_interface.h"
 
 #include "transport/can/can-net.h"
 #include "common/consts.h"
@@ -39,7 +40,9 @@ static msg_t aseba_bridge_uart_to_can(void *p)
 
         palTogglePad(GPIOD, GPIOD_LED3);
 
+        aseba_can_lock();
         AsebaCanSendSpecificSource(data, length.u16 + 2, source.u16);
+        aseba_can_unlock();
     }
 
     return MSG_OK;
