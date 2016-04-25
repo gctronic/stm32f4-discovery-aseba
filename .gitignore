@@ -6,8 +6,6 @@ debug/
 # Vim swap
 *.swp
 
-CMakeLists.txt
-
 tags*
 .tags*
 *.o
