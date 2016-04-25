@@ -50,40 +50,14 @@ static THD_FUNCTION(aseba_vm_thd, arg)
 		{
 			unsigned i;
 			// Find first bit from right (LSB), check if some CAN packets are pending
-			// Atomstidhcp-1-064ically, do an Idle() if nothing is found
-			// Warning, I'm doing some nasty things with the IPL bits (forcing the value, without safeguard)
-			// Second warning: It doesn't disable level 7 interrupt. So if you set an event inside a level 7 interrupt
-			// It may get delayed until next interrupt
-			/* Original dsPIC33 code ...
-
-			asm __volatile__ ("mov #SR, w0 \r\n"
-							"mov #0xC0, w1\r\n"
-							"ior.b w1, [w0], [w0]\r\n" // Disable all interrupts (except level 7) by setting IPL to 6
-							"ff1r [%[word]], %[b]\r\n" // Find the LSb. If there is one then the C flag is cleared
-							"bra nc, 1f\r\n"		   // Then branch to label 1 if there was one LSb
-							"rcall _AsebaCanRecvBufferEmpty\r\n"  // Else test if received something via Can bus
-					  		"cp0 w0\r\n"      // If received something then 0
-							"bra z, 1f \r\n"  // Then branch to label 1 if received something
-							"rcall _clock_idle\r\n"  // Powersave WITH interrupt disabled. It works, read section 6.2.5 of dsPIC manual
-							"1: \r\n"
-							"mov #SR, w0 \r\n"		 //
-							"mov #0x1F, w1\r\n"
-							"and.b w1, [w0],[w0] \r\n" // enable interrupts
-							 : [b] "=x" (i) : [word] "r" (&events_flags) : "cc", "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7");
-							// Why putting "x" as constrain register. Because it's w8-w9, so it's preserved accross function call
-							// we do a rcall, so we must clobber w0-w7
-            */
-            // ... simplified by just ...
-//            i = __builtin_ffs(events_flags);    // ... Find first set bit in events_flags
-            i = ffs(events_flags);    // ... Find first set bit in events_flags
+			// Atomically, do an Idle() if nothing is found
+            i = ffs(events_flags);
 
 			// If a local eventCLEAR_EVENT is pending, then execute it.
 			// Else, we waked up from idle because of an interrupt, so re-execute the whole thing
 			// FIXME: do we want to kill execution upon local events? that would be consistant so Steph votes yes, but
 			// we may discuss further
 			if(i && !(AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) &&  AsebaMaskIsSet(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))) {
-			// that is the same as (thx de Morgan)
-			//if(i && (AsebaMaskIsClear(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) ||  AsebaMaskIsClear(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))) {
 				i--;
 				CLEAR_EVENT(i);
 				vmVariables.source = vmState.nodeId;
