@@ -23,10 +23,14 @@
 MEMORY
 {
     flash_bootloader : org = 0x08000000, len = 128k
-    flash : org = 0x08020000, len = 896k /* 7*128k */
+    flash : org = 0x08020000, len = 768k /* 7*128k */
+    aseba_bytecode : org = 0x080e0000, len = 128k
     ram : org = 0x20000000, len = 112k
     ethram : org = 0x2001C000, len = 16k
     ccmram : org = 0x10000000, len = 64k
 }
+
+_aseba_bytecode_start = ORIGIN(aseba_bytecode);
+_aseba_bytecode_end = ORIGIN(aseba_bytecode) + LENGTH(aseba_bytecode);
 
 INCLUDE linkerscript.ld

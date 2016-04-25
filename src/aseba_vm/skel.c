@@ -10,6 +10,8 @@
 #include "common/consts.h"
 #include "transport/buffer/vm-buffer.h"
 
+#include "flash/flash.h"
+
 #include "aseba_vm/skel.h"
 #include "aseba_vm/skel_user.c"
 #include "aseba_vm/aseba_bridge.h"
@@ -97,6 +99,11 @@ uint16 AsebaShouldDropPacket(uint16 source, const uint8* data)
 // Used to write bytecode in the flash, not implemented yet
 void AsebaWriteBytecode(AsebaVMState *vm)
 {
-    (void) vm;
-	AsebaVMEmitNodeSpecificError(vm, "Not implemented yet.");
+    extern char _aseba_bytecode_start;
+
+    flash_unlock();
+    flash_sector_erase(&_aseba_bytecode_start);
+    flash_write(&_aseba_bytecode_start, &vm->bytecodeSize, sizeof(uint16));
+    flash_write(&_aseba_bytecode_start + sizeof(uint16), vm->bytecode, vm->bytecodeSize);
+    flash_lock();
 }

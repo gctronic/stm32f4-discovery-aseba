@@ -89,6 +89,7 @@ static uint16_t get_unique_id(void)
 
 void aseba_vm_init(void)
 {
+    uint16_t bytecode_size;
     char name[32];
     vmState.nodeId = get_unique_id();
 
@@ -111,6 +112,18 @@ void aseba_vm_init(void)
     vmVariables.acc[0] = 0.0f;
     vmVariables.acc[1] = 0.0f;
     vmVariables.acc[2] = 0.0f;
+
+    extern uint8_t _aseba_bytecode_start;
+    uint8_t *pos = &_aseba_bytecode_start;
+
+    memcpy(&bytecode_size, pos, sizeof(bytecode_size));
+
+    pos += sizeof(uint16_t);
+
+    // Check if the bytecode page was erased
+    if (bytecode_size != 0xffff) {
+        memcpy(vmState.bytecode, pos, bytecode_size);
+    }
 
     chThdSleepMilliseconds(500);
 
