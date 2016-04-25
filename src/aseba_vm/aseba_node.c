@@ -3,7 +3,7 @@
 #include "chprintf.h"
 #include "usbcfg.h"
 #include "unique_id.h"
-#include <strings.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "common/types.h"
@@ -27,6 +27,8 @@ static THD_WORKING_AREA(aseba_vm_thd_wa, 1024);
 static THD_FUNCTION(aseba_vm_thd, arg)
 {
     (void)arg;
+
+    chRegSetThreadName("aseba");
 
     AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 
