@@ -19,3 +19,6 @@
 [submodule "src/cmp"]
 	path = src/cmp
 	url = https://github.com/cvra/cmp
+[submodule "src/crc"]
+	path = src/crc
+	url = https://github.com/cvra/crc

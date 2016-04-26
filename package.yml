@@ -2,6 +2,14 @@ dependency-dir: src/
 
 depends:
     - parameter
+    - crc
+
+source:
+    - src/config_flash_storage.c
+
+tests:
+    - tests/config_save_test.cpp
+    - tests/flash_mock.cpp
 
 target.arm:
     - src/panic.c
