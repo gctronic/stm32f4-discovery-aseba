@@ -57,7 +57,7 @@ dfu-util -d 0483:df11 \ # VendorID:ProductID for STM32F407.
 
 The vendor id and product id can be obtained from `System Information.app` on OSX and `lsusb` on Linux.
 
-Once the flashing operation is complete, you can remove the bridge between BOOT0 and ground.
+Once the flashing operation is complete, you can remove the bridge between BOOT0 and 5V.
 Reset the microcontroller, and you are done.
 
 [dfu-util]: http://dfu-util.sourceforge.net/
