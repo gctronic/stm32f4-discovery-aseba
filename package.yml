@@ -1,0 +1,4 @@
+dependency-dir: src/
+
+depends:
+    - parameter
