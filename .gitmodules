@@ -7,3 +7,6 @@
 [submodule "aseba-bootloader/libopencm3"]
 	path = aseba-bootloader/libopencm3
 	url = https://github.com/libopencm3/libopencm3.git
+[submodule "src/parameter"]
+	path = src/parameter
+	url = https://github.com/Stapelzeiger/parameter
