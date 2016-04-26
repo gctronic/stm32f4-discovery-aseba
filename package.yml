@@ -2,3 +2,16 @@ dependency-dir: src/
 
 depends:
     - parameter
+
+target.arm:
+    - src/panic.c
+    - src/cmd.c
+    - src/main.c
+    - src/usbcfg.c
+    - src/unique_id.c
+    - src/malloc_lock.c
+    - src/memory_protection.c
+    - src/flash/flash.c
+
+templates:
+    src/src.mk.jinja: src/src.mk

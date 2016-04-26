@@ -108,20 +108,19 @@ endif
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
-CSRC = $(PORTSRC) \
-       $(KERNSRC) \
-       $(TESTSRC) \
-       $(HALSRC) \
-       $(OSALSRC) \
-       $(PLATFORMSRC) \
-       $(BOARDSRC) \
-       $(CHIBIOS)/os/various/shell.c \
-       $(CHIBIOS)/os/various/syscalls.c \
-       $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
-       $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
-       $(DEMOSRC) \
-       $(ASEBASRC) \
-       $(SRC)
+CSRC += $(PORTSRC) \
+        $(KERNSRC) \
+        $(TESTSRC) \
+        $(HALSRC) \
+        $(OSALSRC) \
+        $(PLATFORMSRC) \
+        $(BOARDSRC) \
+        $(CHIBIOS)/os/various/shell.c \
+        $(CHIBIOS)/os/various/syscalls.c \
+        $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
+        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
+        $(DEMOSRC) \
+        $(ASEBASRC) \
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

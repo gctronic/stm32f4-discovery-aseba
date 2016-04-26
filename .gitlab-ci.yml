@@ -1,7 +1,10 @@
 firmware:
   image: antoinealb/gcc-arm-embedded
   script:
+    - apt-get update && apt-get install -y python3-pip
+    - pip3 install cvra-packager
     - git submodule update --init
+    - packager
     - make
 
 bootloader:
