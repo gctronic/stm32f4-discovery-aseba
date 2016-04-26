@@ -83,7 +83,7 @@ endif
 #
 
 # Define project name here
-PROJECT = ch
+PROJECT = aseba-discovery
 
 # Imported source files and paths
 CHIBIOS = ./ChibiOS
@@ -228,10 +228,11 @@ ULIBS =
 ##############################################################################
 
 
-build/ch_patched.hex: build/ch.hex
-	python patch_hex.py build/ch.hex build/ch_patched.hex
 
-MAKE_ALL_RULE_HOOK = build/ch_patched.hex
+MAKE_ALL_RULE_HOOK = build/$(PROJECT)_patched.hex
+
+build/$(PROJECT)_patched.hex: build/$(PROJECT).hex
+	python patch_hex.py $< $@
 
 # RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 RULESPATH = .
