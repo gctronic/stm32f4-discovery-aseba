@@ -40,19 +40,26 @@ static THD_FUNCTION(aseba_vm_thd, arg)
         AsebaVMRun(&vmState, 1000);
         AsebaProcessIncomingEvents(&vmState);
 
-		// Either we are in step by step, so we go to sleep until further commands, or we are not executing an event,
-		// and so we have nothing to do.
-		if (AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) || AsebaMaskIsClear(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))
-		{
-			unsigned int i = ffs(events_flags);
+        // Do not process events in step by step mode
+        if (AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK)) {
+            continue;
+        }
 
-			// If a local event is pending, then execute it.
-			if(i && !(AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) &&  AsebaMaskIsSet(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))) {
-				i--;
-				CLEAR_EVENT(i);
-				vmVariables.source = vmState.nodeId;
-				AsebaVMSetupEvent(&vmState, ASEBA_EVENT_LOCAL_EVENTS_START - i);
-            }
+        // If we are not executing an event, there is nothing to do
+        if (AsebaMaskIsSet(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK)) {
+            continue;
+        }
+
+        int event = ffs(events_flags) - 1;
+
+        // If a local event is pending, then execute it.
+        if (event != - 1) {
+
+            CLEAR_EVENT(event);
+
+            vmVariables.source = vmState.nodeId;
+
+            AsebaVMSetupEvent(&vmState, ASEBA_EVENT_LOCAL_EVENTS_START - event);
         }
     }
     return 0;
