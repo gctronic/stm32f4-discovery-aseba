@@ -64,7 +64,11 @@ void AsebaResetIntoBootloader(AsebaVMState *vm)
 
 void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
 {
-    nativeFunctions[id](vm);
+    if (id < sizeof(nativeFunctions)/(sizeof(nativeFunctions[0]))) {
+        nativeFunctions[id](vm);
+    } else {
+        AsebaVMEmitNodeSpecificError(vm, "Invalid native function.");
+    }
 }
 
 const AsebaNativeFunctionDescription * const * AsebaGetNativeFunctionsDescriptions(AsebaVMState *vm)
