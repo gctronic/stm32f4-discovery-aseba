@@ -105,7 +105,6 @@ void MemManage_Handler(void)
     /* Setup default error message. */
     strcpy(msg, __FUNCTION__);
 
-#ifdef MPU_DETAILED_MSG
     uint32_t MMFSR;
     struct port_extctx ctx;
     /* Get context info */
@@ -126,7 +125,6 @@ void MemManage_Handler(void)
                  "Jumped to XN region %p (lr_thd=%p)",
                     (void *)SCB->MMFAR, ctx.lr_thd);
     }
-#endif
 
     chSysHalt(msg);
 }
