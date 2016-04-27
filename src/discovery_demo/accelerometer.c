@@ -33,7 +33,6 @@ static THD_FUNCTION(AcceleroThd, arg) {
     chRegSetThreadName("Accelerometer");
 
     /* Reader thread loop.*/
-//    time = chVTGetSystemTime();
     while (TRUE) {
         unsigned i;
 
@@ -62,8 +61,7 @@ static THD_FUNCTION(AcceleroThd, arg) {
         acc_callback();
 
         /* Waiting until the next 100 milliseconds time interval.*/
-        // chThdSleepUntil(time += MS2ST(100));
-        chThdSleepUntilWindowed(time, time += MS2ST(100));
+        chThdSleepUntilWindowed(time, time + MS2ST(100));
     }
 
     return 1;
