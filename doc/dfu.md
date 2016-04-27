@@ -9,7 +9,7 @@ linkcolor: black
 # Introduction
 Most microcontrollers are programmed using JTAG for flashing.
 However this is not always practical: JTAG adapters are not always available or JTAG connections might not be available for the end user.
-To solve this problem a bootloader is employed, which is a small software used to self-update the microcontroller using a standard communication port such as USB, CAN, Ethernet or UART.
+To solve this problem a bootloader is employed, which is a small software used to update the microcontroller using a standard communication port such as USB, CAN, Ethernet or UART.
 
 STM32 microcontrollers come with such a bootloader which is stored in the internal boot ROM memory.
 This allows us to update the firmware using USB Device Firmware Upgrade (DFU) standard (other communications methods are possible).
