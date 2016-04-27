@@ -12,7 +12,6 @@ typedef struct {
 /** Accelerometer callback */
 typedef void(*accelerometer_callback)(void);
 
-// void demo_acc_start(void);
 void demo_acc_start(accelerometer_callback callback);
 void demo_acc_get_acc(float *acc);
 

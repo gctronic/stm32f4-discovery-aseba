@@ -8,26 +8,11 @@
 accelerometer_sample_t  acc_sample;
 accelerometer_callback acc_callback;
 
-/*
- * SPI1 configuration structure.
- * Speed 5.25MHz, CPHA=1, CPOL=1, 8bits frames, MSb transmitted first.
- * The slave select line is the pin GPIOE_CS_SPI on the port GPIOE.
- */
-static const SPIConfig spi1cfg = {
-    NULL,
-    /* HW dependent part.*/
-    GPIOE,
-    GPIOE_CS_SPI,
-    SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA
-};
 
-/*
- * This is a periodic thread that reads accelerometer and stores the info
- */
 static THD_WORKING_AREA(waAcceleroThd, 128);
 static THD_FUNCTION(AcceleroThd, arg) {
     static int8_t xbuf[4], ybuf[4], zbuf[4];
-    systime_t time; // Next deadline
+    systime_t time;
 
     (void)arg;
     chRegSetThreadName("Accelerometer");
@@ -69,10 +54,13 @@ static THD_FUNCTION(AcceleroThd, arg) {
 
 void demo_acc_start(accelerometer_callback callback)
 {
-    /*
-     * Initializes the SPI driver 1 in order to access the MEMS. The signals
-     * are already initialized in the board file.
-     */
+    static const SPIConfig spi1cfg = {
+        NULL,
+        /* HW dependent part.*/
+        GPIOE,
+        GPIOE_CS_SPI,
+        SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA
+    };
     spiStart(&SPID1, &spi1cfg);
     acc_callback = callback;
 
@@ -83,9 +71,6 @@ void demo_acc_start(accelerometer_callback callback)
     lis302dlWriteRegister(&SPID1, LIS302DL_CTRL_REG2, 0x00);
     lis302dlWriteRegister(&SPID1, LIS302DL_CTRL_REG3, 0x00);
 
-    /*
-     * Creates the demo thread.
-     */
     chThdCreateStatic(waAcceleroThd,
                       sizeof(waAcceleroThd),
                       NORMALPRIO + 10,
