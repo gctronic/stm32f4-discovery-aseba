@@ -10,7 +10,7 @@
 char board_name[32];
 
 const AsebaVMDescription vmDescription = {
-	board_name,
+	BOARD_NAME,
 	{
 		// {Number of element in array, Name displayed in aseba studio}
 		{1, "_id"},
@@ -62,10 +62,3 @@ static AsebaNativeFunctionPointer nativeFunctions[] = {
 	ASEBA_NATIVES_STD_FUNCTIONS,
     DISCOVERY_NATIVES_FUNCTIONS
 };
-
-void set_board_name(const char *name)
-{
-    strncpy(board_name, name, sizeof(board_name) - 1);
-    board_name[sizeof(board_name) - 1] = '\0';
-}
-

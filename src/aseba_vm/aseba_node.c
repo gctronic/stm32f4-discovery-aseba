@@ -36,29 +36,17 @@ static THD_FUNCTION(aseba_vm_thd, arg)
         // Don't spin too fast to avoid consuming all CPU time
         chThdYield();
 
-        // Sync Aseba with the state of the Microcontroller
-        update_aseba_variables_read();
-
         // Run VM for some time
         AsebaVMRun(&vmState, 1000);
         AsebaProcessIncomingEvents(&vmState);
-
-        // Sync the Microcontroller with the state of Aseba
-        update_aseba_variables_write();
 
 		// Either we are in step by step, so we go to sleep until further commands, or we are not executing an event,
 		// and so we have nothing to do.
 		if (AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) || AsebaMaskIsClear(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))
 		{
-			unsigned i;
-			// Find first bit from right (LSB), check if some CAN packets are pending
-			// Atomically, do an Idle() if nothing is found
-            i = ffs(events_flags);
+			unsigned int i = ffs(events_flags);
 
-			// If a local eventCLEAR_EVENT is pending, then execute it.
-			// Else, we waked up from idle because of an interrupt, so re-execute the whole thing
-			// FIXME: do we want to kill execution upon local events? that would be consistant so Steph votes yes, but
-			// we may discuss further
+			// If a local event is pending, then execute it.
 			if(i && !(AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK) &&  AsebaMaskIsSet(vmState.flags, ASEBA_VM_EVENT_ACTIVE_MASK))) {
 				i--;
 				CLEAR_EVENT(i);
@@ -90,28 +78,16 @@ static uint16_t get_unique_id(void)
 void aseba_vm_init(void)
 {
     uint16_t bytecode_size;
-    char name[32];
     vmState.nodeId = get_unique_id();
 
-    sprintf(name, "Discovery %d", vmState.nodeId);
-    set_board_name(name);
-
     AsebaVMInit(&vmState);
+
+    /* Initializes constant variables. */
+    memset(&vmVariables, 0, sizeof(vmVariables));
     vmVariables.id = vmState.nodeId;
     vmVariables.productId = ASEBA_PID_UNDEFINED;
     vmVariables.fwversion[0] = 0;
     vmVariables.fwversion[1] = 1;
-
-    vmVariables.leds[0] = 0;
-    vmVariables.leds[1] = 0;
-    vmVariables.leds[2] = 0;
-    vmVariables.leds[3] = 0;
-    vmVariables.leds[4] = 0;
-    vmVariables.leds[5] = 0;
-
-    vmVariables.acc[0] = 0.0f;
-    vmVariables.acc[1] = 0.0f;
-    vmVariables.acc[2] = 0.0f;
 
     extern uint8_t _aseba_bytecode_start;
     uint8_t *pos = &_aseba_bytecode_start;
@@ -144,16 +120,4 @@ void accelerometer_cb(void)
     vmVariables.acc[1] = (sint16) accf[1];
     vmVariables.acc[2] = (sint16) accf[2];
     SET_EVENT(EVENT_ACC);
-}
-
-// This function must update the variable to match the microcontroller state
-void update_aseba_variables_read(void)
-{
-    // accelerometer_cb();
-}
-
-// This function must update the microcontrolleur state to match the variables
-void update_aseba_variables_write(void)
-{
-
 }
