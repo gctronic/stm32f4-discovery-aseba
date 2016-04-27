@@ -1,10 +1,12 @@
 #include "ch.h"
 #include "hal.h"
 
-#include "aseba_node.h"
+#include "skel_user.h"
 
 #include "vm/natives.h"
 #include "discovery_demo/discovery_natives.h"
+
+struct _vmVariables vmVariables;
 
 const AsebaVMDescription vmDescription = {
 	BOARD_NAME,

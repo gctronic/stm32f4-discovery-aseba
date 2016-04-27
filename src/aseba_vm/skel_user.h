@@ -5,6 +5,44 @@
 extern "C" {
 #endif
 
+#include "common/types.h"
+#include "vm/vm.h"
+#include "vm/natives.h"
+
+/** Number of variables usable by the Aseba script. */
+#define VM_VARIABLES_FREE_SPACE 256
+
+/** Maximum number of args an Aseba event can use. */
+#define VM_VARIABLES_ARG_SIZE 32
+
+/** Enum containing all the possible events. */
+enum AsebaLocalEvents
+{
+	EVENT_ACC = 0, // New accelerometer measurement
+};
+
+
+/** Struct type defining the variables to expose to the VM.
+ *
+ * @note This should be kept in sync with the variable descriptions.
+ */
+struct _vmVariables {
+	sint16 id; 							// NodeID
+	sint16 source; 						// Source
+	sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
+	sint16 fwversion[2];				// Firmware version
+	sint16 productId;					// Product ID
+
+	// Variables
+	uint16 leds[6];
+	sint16 acc[3];
+
+	// Free space
+	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
+};
+
+extern struct _vmVariables vmVariables;
+
 extern const AsebaVMDescription vmDescription;
 extern const AsebaLocalEventDescription localEvents[];
 

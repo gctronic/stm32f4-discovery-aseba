@@ -23,7 +23,6 @@ void update_aseba_variables_write(void);
 sint16 aseba_float_to_int(float var, float max);
 
 unsigned int events_flags = 0;
-struct _vmVariables vmVariables;
 static uint16 vmBytecode[VM_BYTECODE_SIZE];
 static sint16 vmStack[VM_STACK_SIZE];
 
