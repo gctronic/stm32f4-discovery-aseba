@@ -8,6 +8,7 @@ ASEBASRC = $(ASEBA)/transport/buffer/vm-buffer.c \
            src/aseba_vm/aseba_can_interface.c \
            src/aseba_vm/aseba_node.c \
            src/aseba_vm/skel.c \
+           src/aseba_vm/skel_user.c \
            src/aseba_vm/aseba_bridge.c \
 
 

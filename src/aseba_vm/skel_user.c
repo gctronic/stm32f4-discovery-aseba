@@ -6,8 +6,6 @@
 #include "vm/natives.h"
 #include "discovery_demo/discovery_natives.h"
 
-char board_name[32];
-
 const AsebaVMDescription vmDescription = {
 	BOARD_NAME,
 	{
@@ -26,7 +24,7 @@ const AsebaVMDescription vmDescription = {
 };
 
 // Event descriptions
-static const AsebaLocalEventDescription localEvents[] = {
+const AsebaLocalEventDescription localEvents[] = {
     {"new_acc", "New accelerometer measurement"},
 	{NULL, NULL}
 };
@@ -48,7 +46,7 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 }
 
 // Native function descriptions
-static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
+const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
     ASEBA_NATIVES_STD_DESCRIPTIONS,
     DISCOVERY_NATIVES_DESCRIPTIONS,
@@ -56,8 +54,10 @@ static const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 };
 
 // Native function pointers
-static AsebaNativeFunctionPointer nativeFunctions[] = {
+AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative__system_reboot,
 	ASEBA_NATIVES_STD_FUNCTIONS,
     DISCOVERY_NATIVES_FUNCTIONS
 };
+
+const int nativeFunctions_length = sizeof(nativeFunctions) / sizeof(nativeFunctions[0]);

@@ -13,13 +13,13 @@
 #include "flash/flash.h"
 #include "aseba_vm/aseba_node.h"
 
-#include "aseba_vm/skel_user.c"
+#include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_bridge.h"
 
 
 void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
 {
-    if (id < sizeof(nativeFunctions)/(sizeof(nativeFunctions[0]))) {
+    if (id < nativeFunctions_length) {
         nativeFunctions[id](vm);
     } else {
         AsebaVMEmitNodeSpecificError(vm, "Invalid native function.");

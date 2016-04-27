@@ -5,7 +5,12 @@
 extern "C" {
 #endif
 
+extern const AsebaVMDescription vmDescription;
+extern const AsebaLocalEventDescription localEvents[];
 
+extern AsebaNativeFunctionPointer nativeFunctions[];
+extern const AsebaNativeFunctionDescription* nativeFunctionsDescription[];
+extern const int nativeFunctions_length;
 
 #ifdef __cplusplus
 }
