@@ -9,21 +9,38 @@
 #include "common/types.h"
 #include "common/consts.h"
 #include "common/productids.h"
-#include "vm/vm.h"
 #include "transport/buffer/vm-buffer.h"
-#include "aseba_vm/skel.h"
 #include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_node.h"
 
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
 
-
 void update_aseba_variables_read(void);
 void update_aseba_variables_write(void);
 sint16 aseba_float_to_int(float var, float max);
 
-static THD_WORKING_AREA(aseba_vm_thd_wa, 1024);
+unsigned int events_flags = 0;
+struct _vmVariables vmVariables;
+static uint16 vmBytecode[VM_BYTECODE_SIZE];
+static sint16 vmStack[VM_STACK_SIZE];
+
+AsebaVMState vmState = {
+    .nodeId=0, /* changed by aseba_vm_init() */
+
+    .bytecodeSize=VM_BYTECODE_SIZE,
+    .bytecode=vmBytecode,
+
+    .variablesSize=sizeof(vmVariables) / sizeof(sint16),
+    .variables=(sint16*)&vmVariables,
+
+    .stackSize=VM_STACK_SIZE,
+    .stack=vmStack,
+    .flags=0, .pc=0, .sp=0,
+    .breakpoints={0}, .breakpointsCount=0,
+};
+
+
 static THD_FUNCTION(aseba_vm_thd, arg)
 {
     (void)arg;
@@ -115,8 +132,27 @@ void aseba_vm_init(void)
 
 void aseba_vm_start(void)
 {
+    static THD_WORKING_AREA(aseba_vm_thd_wa, 1024);
     chThdCreateStatic(aseba_vm_thd_wa, sizeof(aseba_vm_thd_wa), LOWPRIO, aseba_vm_thd, NULL);
 }
+
+void AsebaIdle(void)
+{
+    chThdYield();
+}
+
+void AsebaPutVmToSleep(AsebaVMState *vm)
+{
+    (void) vm;
+    chThdSleepMilliseconds(1000);
+}
+
+void AsebaResetIntoBootloader(AsebaVMState *vm)
+{
+    (void) vm;
+    NVIC_SystemReset();
+}
+
 
 // This function must update the accelerometer variables
 void accelerometer_cb(void)

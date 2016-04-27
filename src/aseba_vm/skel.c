@@ -11,53 +11,11 @@
 #include "transport/buffer/vm-buffer.h"
 
 #include "flash/flash.h"
+#include "aseba_vm/aseba_node.h"
 
-#include "aseba_vm/skel.h"
 #include "aseba_vm/skel_user.c"
 #include "aseba_vm/aseba_bridge.h"
 
-unsigned int events_flags = 0;
-
-
-/*
- * VM
- */
-struct _vmVariables vmVariables;
-static uint16 vmBytecode[VM_BYTECODE_SIZE];
-static sint16 vmStack[VM_STACK_SIZE];
-
-AsebaVMState vmState = {
-    .nodeId=0, /* changed by aseba_vm_init() */
-
-    .bytecodeSize=VM_BYTECODE_SIZE,
-    .bytecode=vmBytecode,
-
-    .variablesSize=sizeof(vmVariables) / sizeof(sint16),
-    .variables=(sint16*)&vmVariables,
-
-    .stackSize=VM_STACK_SIZE,
-    .stack=vmStack,
-    .flags=0, .pc=0, .sp=0,
-    .breakpoints={0}, .breakpointsCount=0,
-};
-
-
-void AsebaIdle(void)
-{
-    chThdYield();
-}
-
-void AsebaPutVmToSleep(AsebaVMState *vm)
-{
-    (void) vm;
-    chThdSleepMilliseconds(1000);
-}
-
-void AsebaResetIntoBootloader(AsebaVMState *vm)
-{
-    (void) vm;
-    NVIC_SystemReset();
-}
 
 void AsebaNativeFunction(AsebaVMState *vm, uint16 id)
 {

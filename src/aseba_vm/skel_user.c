@@ -1,12 +1,11 @@
 #include "ch.h"
 #include "hal.h"
 
+#include "aseba_node.h"
+
 #include "vm/natives.h"
 #include "discovery_demo/discovery_natives.h"
 
-/*
- * Descriptors
- */
 char board_name[32];
 
 const AsebaVMDescription vmDescription = {

@@ -14,7 +14,6 @@
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
 
-#include "aseba_vm/skel.h"
 #include "aseba_vm/aseba_node.h"
 #include "aseba_vm/aseba_can_interface.h"
 #include "aseba_vm/aseba_bridge.h"

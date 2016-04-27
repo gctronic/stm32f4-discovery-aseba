@@ -1,4 +1,6 @@
-#include "aseba_vm/skel.h"
+#include "aseba_vm/aseba_node.h"
+#include "vm/natives.h"
+#include "common/types.h"
 #include "discovery_demo/leds.h"
 
 
