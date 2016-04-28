@@ -40,8 +40,6 @@ int main(void)
     chSysInit();
     mpu_init();
 
-    malloc_lock_init();
-
     parameter_namespace_declare(&parameter_root, NULL, NULL);
 
 
