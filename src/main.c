@@ -11,6 +11,7 @@
 #include "malloc_lock.h"
 #include "memory_protection.h"
 #include "main.h"
+#include "config_flash_storage.h"
 
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
@@ -22,6 +23,14 @@
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
 parameter_namespace_t parameter_root;
+
+static bool load_config(void)
+{
+    extern uint32_t _config_start, _config_end;
+    size_t len = (size_t)(&_config_end - &_config_start);
+
+    return config_load(&parameter_root, &_config_start, len);
+}
 
 int main(void)
 {
@@ -67,6 +76,9 @@ int main(void)
     }
 
     demo_acc_start(&accelerometer_cb);
+
+    /* Load parameter tree from flash. */
+    load_config();
 
     shellInit();
 

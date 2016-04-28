@@ -11,6 +11,7 @@
 #include "common/productids.h"
 #include "common/consts.h"
 #include "main.h"
+#include "config_flash_storage.h"
 
 /* Struct used to share Aseba parameters between C-style API and Aseba. */
 static parameter_namespace_t aseba_ns;
@@ -120,7 +121,19 @@ static AsebaNativeFunctionDescription AsebaNativeDescription_settings_save =
 
 void AsebaNative_settings_save(AsebaVMState *vm)
 {
-    AsebaVMEmitNodeSpecificError(vm, "Not implemented (yet!).");
+    extern uint32_t _config_start, _config_end;
+    size_t len = (size_t)(&_config_end - &_config_start);
+    bool success;
+
+    // First write the config to flash
+    config_save(&_config_start, len, &parameter_root);
+
+    // Second try to read it back, see if we failed
+    success = config_load(&parameter_root, &_config_start, len);
+
+    if (!success) {
+        AsebaVMEmitNodeSpecificError(vm, "Config save failed!");
+    }
 }
 
 
