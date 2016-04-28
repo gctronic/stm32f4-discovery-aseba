@@ -126,8 +126,6 @@ void aseba_vm_init(void)
     }
 
     chThdSleepMilliseconds(500);
-
-    AsebaVMSetupEvent(&vmState, ASEBA_EVENT_INIT);
 }
 
 void aseba_vm_start(void)
