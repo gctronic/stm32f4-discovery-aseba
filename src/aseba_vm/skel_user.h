@@ -41,6 +41,9 @@ struct _vmVariables {
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
 };
 
+/** Inits the vmVariables struct. */
+void aseba_variables_init(AsebaVMState *vm);
+
 extern struct _vmVariables vmVariables;
 
 extern const AsebaVMDescription vmDescription;

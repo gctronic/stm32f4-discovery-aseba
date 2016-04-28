@@ -8,7 +8,6 @@
 
 #include "common/types.h"
 #include "common/consts.h"
-#include "common/productids.h"
 #include "transport/buffer/vm-buffer.h"
 #include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_node.h"
@@ -16,7 +15,6 @@
 #include "flash/flash.h"
 
 #include "discovery_demo/accelerometer.h"
-#include "discovery_demo/leds.h"
 
 void update_aseba_variables_read(void);
 void update_aseba_variables_write(void);
@@ -107,12 +105,7 @@ void aseba_vm_init(void)
 
     AsebaVMInit(&vmState);
 
-    /* Initializes constant variables. */
-    memset(&vmVariables, 0, sizeof(vmVariables));
-    vmVariables.id = vmState.nodeId;
-    vmVariables.productId = ASEBA_PID_UNDEFINED;
-    vmVariables.fwversion[0] = 0;
-    vmVariables.fwversion[1] = 1;
+    aseba_variables_init(&vmState);
 
     extern uint8_t _aseba_bytecode_start;
     uint8_t *pos = &_aseba_bytecode_start;
@@ -204,9 +197,8 @@ void AsebaWriteBytecode(AsebaVMState *vm)
     flash_lock();
 }
 
-
-
 // This function must update the accelerometer variables
+// FIXME: This should be moved to skel_user.c
 void accelerometer_cb(void)
 {
     static float accf[3];

@@ -1,3 +1,4 @@
+#include <string.h>
 #include "ch.h"
 #include "hal.h"
 
@@ -5,6 +6,7 @@
 
 #include "vm/natives.h"
 #include "discovery_demo/leds.h"
+#include "common/productids.h"
 
 struct _vmVariables vmVariables;
 
@@ -30,6 +32,18 @@ const AsebaLocalEventDescription localEvents[] = {
     {"new_acc", "New accelerometer measurement"},
 	{NULL, NULL}
 };
+
+void aseba_variables_init(AsebaVMState *vm)
+{
+    /* Initializes constant variables. */
+    memset(&vmVariables, 0, sizeof(vmVariables));
+    vmVariables.id = vm->nodeId;
+
+    vmVariables.productId = ASEBA_PID_UNDEFINED;
+    vmVariables.fwversion[0] = 0;
+    vmVariables.fwversion[1] = 1;
+}
+
 
 // Native functions
 static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
