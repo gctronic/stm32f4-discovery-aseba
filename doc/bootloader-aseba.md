@@ -1,0 +1,80 @@
+---
+title: Using the Aseba bootloader on the STM32 Discovery
+author: Antoine Albertelli, WISE Robotics
+documentclass: article
+urlcolor: blue
+linkcolor: black
+abstract: |
+    The Aseba programming environment includes a bootloader protocol that can be used to upgrades nodes over different transport layers.
+    Currently, this includes TCP, HTTP, CAN and serial ports.
+    A port of the Aseba bootloader for STM32 was implemented, supporting upgrade via CAN.
+    This document presents how to use it.
+---
+
+# Plan
+
+1. Intro
+2. Installing the Aseba bootloader
+    1. Building it
+    2. Flashing it
+3. Building the application with bootloader support
+4. Starting asebaswitch
+5. Flashing the application using asebacmd
+6. Exiting the bootloader
+
+TODO: Implement going into bootloader from application.
+TODO: Implement node ID sharing between the two firmwares.
+
+
+# Building the Aseba bootloader
+From the bootloader source project directory (`aseba-bootloader`), run the following commands to import and build the dependencies.
+This process is only required once.
+
+```bash
+git submodule update --init
+pushd libopencm3
+make
+popd ..
+```
+
+Then to compile the bootloader itself run `make`, which must be redone after each changes.
+
+# Flashing the Aseba bootloader
+In this example we will assume the bootloader is flashed using JTAG.
+It is also possible to use the DFU programming protocol, please see the corresponding documentation for details.
+
+Once the device is attached, simply entering `make flash` will program the device.
+*Note:* This requires OpenOCD to work.
+
+# Building the application with bootloader support
+The application should be recompiled with bootloader support because its vector table and the bootloader's will overlap, causing issues.
+First switch back to the discovery project directory (`cd ..`)
+
+To do so, first clean the project with `make clean`, then compile it with bootloader support `make USE_ASEBA_BOOTLOADER=yes`.
+It should create `build/aseba-discovery.hex` that we will flash in the next step.
+
+*Note:* The default `.hex` file produced contains instructions that `asebacmd`  cannot understand.
+    For this reason, a small Python script (`patch_hex.py`) is used to convert it.
+
+# Starting asebaswitch
+`asebaswitch` is a tool used to create a bridge between several Aseba interfaces.
+We will use it to connect the Aseba translator to the network, allowing asebacmd to connect to it.
+
+In a new terminal run `asebaswitch -d "ser:device=/dev/ttyUSB0"`, replacing `/dev/ttyUSB0` with the path to your adapter.
+The `-d` flag dumps messages to the console, which can be useful for debugging.
+
+*Note: *On OSX (and maybe on other platformws as well), the OS will ask if you want to authorise `asebaswitch` to listen for incoming network connections.
+This is normal and you can allow it.
+
+# Using asebacmd to write the firmware
+
+So now we are ready to flash the node using `asebacmd`.
+We assume that your node has the ID 42, which is the default.
+In case you changed it replace it with your own node id.
+
+```bash
+asebacmd whex 42 build/aseba-discovery_patched.hex
+
+# Exit Bootloader, aka go back to application mode
+asebacmd eb 42
+```
