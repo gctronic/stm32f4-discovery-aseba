@@ -136,6 +136,22 @@ void AsebaNative_settings_save(AsebaVMState *vm)
     }
 }
 
+static AsebaNativeFunctionDescription AsebaNativeDescription_settings_erase =
+{
+    "settings.erase",
+    "Restore settings to default value (erases flash)",
+    {
+        {0,0}
+    }
+};
+
+
+void AsebaNative_settings_erase(AsebaVMState *vm)
+{
+    extern uint32_t _config_start;
+
+    config_erase(&_config_start);
+}
 
 AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
     "leds.clear_all",
@@ -144,6 +160,7 @@ AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
         {0, 0}
     }
 };
+
 
 void clear_all_leds(AsebaVMState *vm)
 {
@@ -162,6 +179,7 @@ void clear_all_leds(AsebaVMState *vm)
 const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
 	&AsebaNativeDescription_settings_save,
+	&AsebaNativeDescription_settings_erase,
     &AsebaNativeDescription_clear_all_leds,
     ASEBA_NATIVES_STD_DESCRIPTIONS,
     0
@@ -171,6 +189,7 @@ const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative__system_reboot,
     AsebaNative_settings_save,
+    AsebaNative_settings_erase,
     clear_all_leds,
 	ASEBA_NATIVES_STD_FUNCTIONS,
 };

@@ -284,7 +284,6 @@ static void cmd_config_erase(BaseSequentialStream *chp, int argc, char **argv)
     (void) chp;
     extern uint32_t _config_start;
 
-    // First write the config to flash
     config_erase(&_config_start);
 }
 
