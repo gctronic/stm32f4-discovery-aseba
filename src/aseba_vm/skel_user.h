@@ -15,6 +15,8 @@ extern "C" {
 /** Maximum number of args an Aseba event can use. */
 #define VM_VARIABLES_ARG_SIZE 32
 
+#define SETTINGS_COUNT 32
+
 /** Enum containing all the possible events. */
 enum AsebaLocalEvents
 {
@@ -36,6 +38,8 @@ struct _vmVariables {
 	// Variables
 	uint16 leds[6];
 	sint16 acc[3];
+
+    sint16 settings[SETTINGS_COUNT];
 
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
