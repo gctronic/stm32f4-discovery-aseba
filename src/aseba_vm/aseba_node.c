@@ -52,9 +52,15 @@ static THD_FUNCTION(aseba_vm_thd, arg)
         // Don't spin too fast to avoid consuming all CPU time
         chThdYield();
 
+        // Sync Aseba with the state of the system
+        aseba_read_variables_from_system(&vmState);
+
         // Run VM for some time
         AsebaVMRun(&vmState, 1000);
         AsebaProcessIncomingEvents(&vmState);
+
+        // Sync the system with the state of Aseba
+        aseba_write_variables_to_system(&vmState);
 
         // Do not process events in step by step mode
         if (AsebaMaskIsSet(vmState.flags, ASEBA_VM_STEP_BY_STEP_MASK)) {

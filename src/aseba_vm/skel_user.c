@@ -7,6 +7,7 @@
 #include "vm/natives.h"
 #include "discovery_demo/leds.h"
 #include "common/productids.h"
+#include "common/consts.h"
 
 struct _vmVariables vmVariables;
 
@@ -44,6 +45,20 @@ void aseba_variables_init(AsebaVMState *vm)
     vmVariables.fwversion[1] = 1;
 }
 
+void aseba_read_variables_from_system(AsebaVMState *vm)
+{
+    ASEBA_UNUSED(vm);
+}
+
+void aseba_write_variables_to_system(AsebaVMState *vm)
+{
+    ASEBA_UNUSED(vm);
+    int i;
+    for(i = 3; i <= 6; i++) {
+        demo_led_set(i, vmVariables.leds[i - 1]);
+    }
+}
+
 
 // Native functions
 static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
@@ -59,26 +74,6 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 {
     (void) vm;
     NVIC_SystemReset();
-}
-
-AsebaNativeFunctionDescription AsebaNativeDescription_set_led = {
-    "leds.set",
-    "Set the specified LED",
-    {
-        {1, "led"},
-        {1, "brightness"},
-        {0, 0}
-    }
-};
-
-void set_led(AsebaVMState *vm)
-{
-    int led = vm->variables[AsebaNativePopArg(vm)];
-    int brightness = vm->variables[AsebaNativePopArg(vm)];
-
-    demo_led_set(led, brightness);
-
-    vmVariables.leds[led - 1] = brightness;
 }
 
 AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
@@ -103,7 +98,6 @@ void clear_all_leds(AsebaVMState *vm)
 // Native function descriptions
 const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
-    &AsebaNativeDescription_set_led,
     &AsebaNativeDescription_clear_all_leds,
     ASEBA_NATIVES_STD_DESCRIPTIONS,
     0
@@ -112,7 +106,6 @@ const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 // Native function pointers
 AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative__system_reboot,
-    &set_led,
     &clear_all_leds,
 	ASEBA_NATIVES_STD_FUNCTIONS,
 };

@@ -44,6 +44,12 @@ struct _vmVariables {
 /** Inits the vmVariables struct. */
 void aseba_variables_init(AsebaVMState *vm);
 
+/** Updates the Aseba variables from the system. */
+void aseba_read_variables_from_system(AsebaVMState *vm);
+
+/** Updates the system from the Aseba variables. */
+void aseba_write_variables_to_system(AsebaVMState *vm);
+
 extern struct _vmVariables vmVariables;
 
 extern const AsebaVMDescription vmDescription;
