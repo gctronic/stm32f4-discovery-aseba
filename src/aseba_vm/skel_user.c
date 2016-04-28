@@ -95,9 +95,52 @@ void clear_all_leds(AsebaVMState *vm)
     }
 }
 
+/* FIXME: Is this enough ? Do we need to do more ? How are settings set ? */
+uint16_t settings[32];
+
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_read =
+{
+	"_system.settings.read",
+	"Read a setting",
+	{
+		{ 1, "address"},
+		{ 1, "value"},
+		{ 0, 0 }
+	}
+};
+
+static void AsebaNative__system_settings_read(AsebaVMState *vm) {
+	uint16 address = vm->variables[AsebaNativePopArg(vm)];
+	uint16 destidx = AsebaNativePopArg(vm);
+
+	vm->variables[destidx] = settings[address];
+}
+
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_write =
+{
+	"_system.settings.write",
+	"Write a setting",
+	{
+		{ 1, "address"},
+		{ 1, "value"},
+		{ 0, 0 }
+	}
+};
+
+static void AsebaNative__system_settings_write(AsebaVMState *vm) {
+	uint16 address = vm->variables[AsebaNativePopArg(vm)];
+	uint16 sourceidx = AsebaNativePopArg(vm);
+
+	settings[address] = vm->variables[sourceidx];
+}
+
+
+
 // Native function descriptions
 const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
+    &AsebaNativeDescription__system_settings_read,
+    &AsebaNativeDescription__system_settings_write,
     &AsebaNativeDescription_clear_all_leds,
     ASEBA_NATIVES_STD_DESCRIPTIONS,
     0
@@ -106,6 +149,8 @@ const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 // Native function pointers
 AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative__system_reboot,
+    AsebaNative__system_settings_read,
+    AsebaNative__system_settings_write,
     &clear_all_leds,
 	ASEBA_NATIVES_STD_FUNCTIONS,
 };
