@@ -10,6 +10,7 @@
 #include "cmd.h"
 #include "malloc_lock.h"
 #include "memory_protection.h"
+#include "main.h"
 
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
@@ -20,6 +21,7 @@
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
+parameter_namespace_t parameter_root;
 
 int main(void)
 {
@@ -30,6 +32,8 @@ int main(void)
     mpu_init();
 
     malloc_lock_init();
+
+    parameter_namespace_declare(&parameter_root, NULL, NULL);
 
 
     // UART2 on PA2(TX) and PA3(RX)

@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdio.h>
+
 #include "ch.h"
 #include "hal.h"
 
@@ -8,6 +10,12 @@
 #include "discovery_demo/leds.h"
 #include "common/productids.h"
 #include "common/consts.h"
+#include "main.h"
+
+/* Struct used to share Aseba parameters between C-style API and Aseba. */
+static parameter_namespace_t aseba_ns;
+static parameter_t aseba_settings[SETTINGS_COUNT];
+static char aseba_settings_name[SETTINGS_COUNT][10];
 
 struct _vmVariables vmVariables;
 
@@ -45,19 +53,42 @@ void aseba_variables_init(AsebaVMState *vm)
     vmVariables.productId = ASEBA_PID_UNDEFINED;
     vmVariables.fwversion[0] = 0;
     vmVariables.fwversion[1] = 1;
+
+    /* Registers all Aseba settings in global namespace. */
+    int i;
+
+    parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
+
+    /* Must be in descending order to keep them sorted on display. */
+    for (i = SETTINGS_COUNT - 1; i >= 0; i--) {
+        sprintf(aseba_settings_name[i], "%d", i);
+        parameter_integer_declare_with_default(&aseba_settings[i],
+                                               &aseba_ns,
+                                               aseba_settings_name[i],
+                                               0);
+    }
 }
 
 void aseba_read_variables_from_system(AsebaVMState *vm)
 {
+    int i;
     ASEBA_UNUSED(vm);
+
+    for (i = 0; i < SETTINGS_COUNT; i++) {
+        vmVariables.settings[i] = parameter_integer_get(&aseba_settings[i]);
+    }
 }
 
 void aseba_write_variables_to_system(AsebaVMState *vm)
 {
     ASEBA_UNUSED(vm);
     int i;
-    for(i = 3; i <= 6; i++) {
+    for (i = 3; i <= 6; i++) {
         demo_led_set(i, vmVariables.leds[i - 1]);
+    }
+
+    for (i = 0; i < SETTINGS_COUNT; i++) {
+        parameter_integer_set(&aseba_settings[i], vmVariables.settings[i]);
     }
 }
 
