@@ -14,3 +14,15 @@ bootloader:
     - cd aseba-bootloader
     - pushd libopencm3 && make && popd
     - make
+
+tests:
+  image: antoinealb/cpputest
+  script:
+    - git submodule update --init
+    - apt-get update && apt-get install -y cmake python3-pip
+    - pip3 install cvra-packager
+    - packager
+    - mkdir build && pushd build
+    - cmake ..
+    - make check
+    - popd
