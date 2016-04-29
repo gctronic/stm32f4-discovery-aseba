@@ -94,7 +94,6 @@ include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 include $(CHIBIOS)/os/rt/rt.mk
 include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
 include $(CHIBIOS)/test/rt/test.mk
-include src/discovery_demo/demo.mk
 include src/aseba_vm/aseba.mk
 include src/src.mk
 
@@ -119,7 +118,7 @@ CSRC += $(PORTSRC) \
         $(CHIBIOS)/os/various/syscalls.c \
         $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
         $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
-        $(DEMOSRC) \
+        $(CHIBIOS)/os/various/devices_lib/accel/lis302dl.c \
         $(ASEBASRC) \
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
@@ -153,7 +152,7 @@ INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
          $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
          $(CHIBIOS)/os/various \
          $(CHIBIOS)/os/hal/lib/streams \
-         $(DEMOINC) \
+         $(CHIBIOS)/os/various/devices_lib/accel \
          $(ASEBAINC) \
          src/
 
