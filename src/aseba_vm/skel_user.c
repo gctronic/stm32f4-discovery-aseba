@@ -148,6 +148,8 @@ static AsebaNativeFunctionDescription AsebaNativeDescription_settings_erase =
 
 void AsebaNative_settings_erase(AsebaVMState *vm)
 {
+    ASEBA_UNUSED(vm);
+
     extern uint32_t _config_start;
 
     config_erase(&_config_start);
