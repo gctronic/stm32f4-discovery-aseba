@@ -33,7 +33,6 @@ const AsebaVMDescription vmDescription = {
 
         {6, "leds"},
         {3, "acc"},
-        {SETTINGS_COUNT, "settings"},
 
 		{0, NULL}
 	}
@@ -72,12 +71,7 @@ void aseba_variables_init(AsebaVMState *vm)
 
 void aseba_read_variables_from_system(AsebaVMState *vm)
 {
-    int i;
     ASEBA_UNUSED(vm);
-
-    for (i = 0; i < SETTINGS_COUNT; i++) {
-        vmVariables.settings[i] = parameter_integer_get(&aseba_settings[i]);
-    }
 }
 
 void aseba_write_variables_to_system(AsebaVMState *vm)
@@ -86,10 +80,6 @@ void aseba_write_variables_to_system(AsebaVMState *vm)
     int i;
     for (i = 3; i <= 6; i++) {
         demo_led_set(i, vmVariables.leds[i - 1]);
-    }
-
-    for (i = 0; i < SETTINGS_COUNT; i++) {
-        parameter_integer_set(&aseba_settings[i], vmVariables.settings[i]);
     }
 }
 
@@ -110,9 +100,55 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
     NVIC_SystemReset();
 }
 
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_read =
+{
+	"_system.settings.read",
+	"Read a setting",
+	{
+		{ 1, "address"},
+		{ 1, "value"},
+		{ 0, 0 }
+	}
+};
+
+static void AsebaNative__system_settings_read(AsebaVMState *vm) {
+	uint16 address = vm->variables[AsebaNativePopArg(vm)];
+	uint16 destidx = AsebaNativePopArg(vm);
+    if (address < SETTINGS_COUNT) {
+	    vm->variables[destidx] = parameter_integer_get(&aseba_settings[address]);
+    } else {
+        AsebaVMEmitNodeSpecificError(vm, "Invalid settings address.");
+    }
+}
+
+static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_write =
+{
+	"_system.settings.write",
+	"Write a setting",
+	{
+		{ 1, "address"},
+		{ 1, "value"},
+		{ 0, 0 }
+	}
+};
+
+static void AsebaNative__system_settings_write(AsebaVMState *vm) {
+	uint16 address = vm->variables[AsebaNativePopArg(vm)];
+	uint16 value = vm->variables[AsebaNativePopArg(vm)];
+
+    if (address < SETTINGS_COUNT) {
+        parameter_integer_set(&aseba_settings[address], value);
+    } else {
+        AsebaVMEmitNodeSpecificError(vm, "Invalid settings address.");
+    }
+}
+
+
+
+
 static AsebaNativeFunctionDescription AsebaNativeDescription_settings_save =
 {
-    "settings.save",
+    "_system.settings.flash",
     "Save settings into flash",
     {
         {0,0}
@@ -138,7 +174,7 @@ void AsebaNative_settings_save(AsebaVMState *vm)
 
 static AsebaNativeFunctionDescription AsebaNativeDescription_settings_erase =
 {
-    "settings.erase",
+    "_system.settings.erase",
     "Restore settings to default value (erases flash)",
     {
         {0,0}
@@ -180,6 +216,8 @@ void clear_all_leds(AsebaVMState *vm)
 // Native function descriptions
 const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 	&AsebaNativeDescription__system_reboot,
+    &AsebaNativeDescription__system_settings_read,
+    &AsebaNativeDescription__system_settings_write,
 	&AsebaNativeDescription_settings_save,
 	&AsebaNativeDescription_settings_erase,
     &AsebaNativeDescription_clear_all_leds,
@@ -190,6 +228,8 @@ const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
 // Native function pointers
 AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative__system_reboot,
+    AsebaNative__system_settings_read,
+    AsebaNative__system_settings_write,
     AsebaNative_settings_save,
     AsebaNative_settings_erase,
     clear_all_leds,

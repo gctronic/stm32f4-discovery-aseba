@@ -39,8 +39,6 @@ struct _vmVariables {
 	uint16 leds[6];
 	sint16 acc[3];
 
-    sint16 settings[SETTINGS_COUNT];
-
 	// Free space
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
 };

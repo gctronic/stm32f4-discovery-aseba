@@ -43,6 +43,7 @@ To do this you will need the following:
 Once everything is installed you can run the following:
 
 ```
+packager
 mkdir build
 cd build
 cmake ..
