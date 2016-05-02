@@ -8,9 +8,9 @@
 
 static bool is_bridge = false;
 
-static msg_t aseba_bridge_uart_to_can(void *p);
-static msg_t aseba_bridge_can_to_uart(void *p);
-static msg_t led_thread(void *p);
+static void aseba_bridge_uart_to_can(void *p);
+static void aseba_bridge_can_to_uart(void *p);
+static void led_thread(void *p);
 
 typedef union {
     uint8_t u8[2];
@@ -33,7 +33,7 @@ void aseba_bridge(BaseSequentialStream *stream)
                       led_thread, NULL);
 }
 
-static msg_t aseba_bridge_uart_to_can(void *p)
+static void aseba_bridge_uart_to_can(void *p)
 {
     chRegSetThreadName("aseba uart -> can");
     BaseSequentialStream *stream = (BaseSequentialStream *)p;
@@ -52,11 +52,9 @@ static msg_t aseba_bridge_uart_to_can(void *p)
         AsebaCanSendSpecificSource(data, length.u16 + 2, source.u16);
         aseba_can_unlock();
     }
-
-    return MSG_OK;
 }
 
-static msg_t aseba_bridge_can_to_uart(void *p)
+static void aseba_bridge_can_to_uart(void *p)
 {
     chRegSetThreadName("aseba can -> uart");
     BaseSequentialStream *stream = (BaseSequentialStream *)p;
@@ -79,11 +77,9 @@ static msg_t aseba_bridge_can_to_uart(void *p)
 		}
         chThdSleepMilliseconds(1);
     }
-
-    return MSG_OK;
 }
 
-static msg_t led_thread(void *p)
+static void led_thread(void *p)
 {
     (void) p;
     while (true) {
@@ -92,8 +88,6 @@ static msg_t led_thread(void *p)
         palClearPad(GPIOD, GPIOD_LED6);
         chThdSleepMilliseconds(300);
     }
-
-    return MSG_OK;
 }
 
 bool aseba_is_bridge(void)

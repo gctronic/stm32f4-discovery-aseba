@@ -48,8 +48,6 @@ static THD_FUNCTION(AcceleroThd, arg) {
         /* Waiting until the next 100 milliseconds time interval.*/
         chThdSleepUntilWindowed(time, time + MS2ST(100));
     }
-
-    return 1;
 }
 
 void demo_acc_start(accelerometer_callback callback)

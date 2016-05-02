@@ -84,7 +84,6 @@ static THD_FUNCTION(aseba_vm_thd, arg)
             AsebaVMSetupEvent(&vmState, ASEBA_EVENT_LOCAL_EVENTS_START - event);
         }
     }
-    return 0;
 }
 
 

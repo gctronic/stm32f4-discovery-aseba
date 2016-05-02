@@ -3,15 +3,12 @@
 # NOTE: Can be overridden externally.
 #
 
-USE_ASEBA_BOOTLOADER = no
-
 # Compiler options here.
 ifeq ($(USE_OPT),)
-# ORG :  USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
-# but modified by DBR :
-  USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
-  USE_OPT += -lm # To use math.h
-  USE_OPT += -fno-strict-aliasing # This is only for Aseba because it doesn't respect the C aliasing rules
+  USE_OPT = -O2 -ggdb -fomit-frame-pointer -falign-functions=16
+
+  # Aseba doesn't build with strict aliasing
+  USE_OPT += -fno-strict-aliasing
 endif
 
 # C specific options here (added to USE_OPT).
@@ -31,7 +28,7 @@ endif
 
 # Linker extra options here.
 ifeq ($(USE_LDOPT),)
-  USE_LDOPT =
+  USE_LDOPT = -lm
 endif
 
 # Enable this if you want link time optimizations (LTO)
@@ -47,6 +44,12 @@ endif
 # Enable this if you want to see the full log while compiling.
 ifeq ($(USE_VERBOSE_COMPILE),)
   USE_VERBOSE_COMPILE = no
+endif
+
+# If enabled, this option makes the build process faster by not compiling
+# modules not used in the current configuration.
+ifeq ($(USE_SMART_BUILD),)
+  USE_SMART_BUILD = no
 endif
 
 #
@@ -69,6 +72,10 @@ ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
   USE_EXCEPTIONS_STACKSIZE = 0x400
 endif
 
+ifeq ($(USE_ASEBA_BOOTLOADER),)
+	USE_ASEBA_BOOTLOADER=no
+endif
+
 # Enables the use of FPU on Cortex-M4 (no, softfp, hard).
 ifeq ($(USE_FPU),)
   USE_FPU = hard
@@ -86,40 +93,49 @@ endif
 PROJECT = aseba-discovery
 
 # Imported source files and paths
-CHIBIOS = ./ChibiOS
+CHIBIOS = ./ChibiOS/
+# Startup files.
+include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
+# HAL-OSAL files.
 include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
+include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
+# RTOS files.
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_stm32f4xx.mk
+include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
+# Other files.
 include $(CHIBIOS)/test/rt/test.mk
+
 include src/aseba_vm/aseba.mk
 include src/src.mk
 
 # Define linker script file here
-# if you don't want to use the bootloader use the linkerscript stm32f407xG_no_bootloader.ld instead
+LDSCRIPT= $(STARTUPLD)/STM32F407xG.ld
+
 ifeq ($(USE_ASEBA_BOOTLOADER),yes)
-LDSCRIPT= stm32f407xG.ld
+	LDSCRIPT= stm32f407xG.ld
 else
-LDSCRIPT= stm32f407xG_no_bootloader.ld
+	LDSCRIPT= stm32f407xG_no_bootloader.ld
 endif
+
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
-CSRC += $(PORTSRC) \
+CSRC += $(STARTUPSRC) \
         $(KERNSRC) \
-        $(TESTSRC) \
-        $(HALSRC) \
+        $(PORTSRC) \
         $(OSALSRC) \
+        $(HALSRC) \
         $(PLATFORMSRC) \
         $(BOARDSRC) \
+        $(TESTSRC) \
         $(CHIBIOS)/os/various/shell.c \
         $(CHIBIOS)/os/various/syscalls.c \
         $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
         $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
         $(CHIBIOS)/os/various/devices_lib/accel/lis302dl.c \
-        $(ASEBASRC) \
+        $(ASEBASRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -146,15 +162,15 @@ TCSRC =
 TCPPSRC =
 
 # List ASM source files here
-ASMSRC = $(PORTASM)
+ASMSRC = $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
-         $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
-         $(CHIBIOS)/os/various \
-         $(CHIBIOS)/os/hal/lib/streams \
-         $(CHIBIOS)/os/various/devices_lib/accel \
-         $(ASEBAINC) \
-         src/
+INCDIR += $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
+          $(HALINC) $(PLATFORMINC) $(BOARDINC) $(TESTINC) \
+          $(CHIBIOS)/os/various \
+          $(CHIBIOS)/os/hal/lib/streams \
+          $(CHIBIOS)/os/various/devices_lib/accel \
+          $(ASEBAINC) \
+		  src
 
 #
 # Project, sources and paths
@@ -166,7 +182,6 @@ INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
 
 MCU  = cortex-m4
 
-#TRGT = arm-elf-
 TRGT = arm-none-eabi-
 CC   = $(TRGT)gcc
 CPPC = $(TRGT)g++
@@ -190,10 +205,10 @@ AOPT =
 TOPT = -mthumb -DTHUMB
 
 # Define C warning options here
-CWARN = -Wall -Wextra -Wstrict-prototypes
+CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
 
 # Define C++ warning options here
-CPPWARN = -Wall -Wextra
+CPPWARN = -Wall -Wextra -Wundef
 
 #
 # Compiler settings
@@ -204,9 +219,10 @@ CPPWARN = -Wall -Wextra
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS = -DARM_MATH_CM4
+UDEFS =
+
 ifeq ($(USE_ASEBA_BOOTLOADER),yes)
-UDEFS = -DCORTEX_VTOR_INIT=0x08020000
+	UDEFS += -DCORTEX_VTOR_INIT=0x08020000
 endif
 
 # Define ASM defines here
@@ -225,16 +241,12 @@ ULIBS =
 # End of user defines
 ##############################################################################
 
-
+RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
+include $(RULESPATH)/rules.mk
 
 MAKE_ALL_RULE_HOOK = build/$(PROJECT)_patched.hex
-
 build/$(PROJECT)_patched.hex: build/$(PROJECT).hex
 	python patch_hex.py $< $@
-
-# RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
-RULESPATH = .
-include $(RULESPATH)/rules.mk
 
 flash: build/$(PROJECT).elf
 	openocd -f oocd.cfg -c "program build/$(PROJECT).elf verify reset exit"

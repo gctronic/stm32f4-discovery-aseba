@@ -40,7 +40,6 @@ static THD_FUNCTION(can_rx_thread, arg)
         }
         AsebaCanFrameReceived(&aseba_can_frame);
     }
-    return 0;
 }
 
 void can_init(void)
