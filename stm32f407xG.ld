@@ -29,7 +29,29 @@ MEMORY
     ram : org = 0x20000000, len = 112k
     ethram : org = 0x2001C000, len = 16k
     ccmram : org = 0x10000000, len = 64k
-}
+    ram0  : org = 0x20000000, len = 128k    /* SRAM1 + SRAM2 */
+    ram1  : org = 0x20000000, len = 112k    /* SRAM1 */
+    ram2  : org = 0x2001C000, len = 16k     /* SRAM2 */
+    ram3  : org = 0x00000000, len = 0
+    ram4  : org = 0x10000000, len = 64k     /* CCM SRAM */
+    ram5  : org = 0x40024000, len = 4k      /* BCKP SRAM */
+    ram6  : org = 0x00000000, len = 0
+    ram7  : org = 0x00000000, len = 0
+ }
+
+/* RAM region to be used for Main stack. This stack accommodates the processing
+   of all exceptions and interrupts*/
+REGION_ALIAS("MAIN_STACK_RAM", ram0);
+
+/* RAM region to be used for the process stack. This is the stack used by
+   the main() function.*/
+REGION_ALIAS("PROCESS_STACK_RAM", ram0);
+
+/* RAM region to be used for data segment.*/
+REGION_ALIAS("DATA_RAM", ram0);
+
+/* RAM region to be used for BSS segment.*/
+REGION_ALIAS("BSS_RAM", ram0);
 
 _aseba_bytecode_start = ORIGIN(aseba_bytecode);
 _aseba_bytecode_end = ORIGIN(aseba_bytecode) + LENGTH(aseba_bytecode);
@@ -37,4 +59,4 @@ _config_start = ORIGIN(config);
 _config_end = ORIGIN(config) + LENGTH(config);
 
 
-INCLUDE linkerscript.ld
+INCLUDE rules.ld
