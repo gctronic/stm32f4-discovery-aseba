@@ -76,9 +76,21 @@ dfu-util -d 0483:df11 \
         -D firmware.bin
 ```
 
-
 Once the flashing operation is complete, you can remove the bridge between BOOT0 and Vdd.
 Reset the microcontroller, and you are done.
+
+# Fixing device permissions on Linux
+
+If you get permission errors on Linux it might be because your user does not have the authorization to access the board.
+If this is the case you need to grant explicit permission by placing the following in `/etc/udev/rules.d/50-stm32-dfu.rules`, then rebooting:
+
+```
+# STMicroelectronics STM Device in DFU Mode
+SUBSYSTEMS=="usb",\
+    ATTRS{idVendor}=="0483", ATTRS{idProduct}=="df11",\
+    GROUP="plugdev", MODE="0666"
+```
+
 
 [dfu-util]: http://dfu-util.sourceforge.net/
 [homebrew]: http://brew.sh/
