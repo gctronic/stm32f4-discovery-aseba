@@ -244,9 +244,5 @@ ULIBS =
 RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk
 
-MAKE_ALL_RULE_HOOK = build/$(PROJECT)_patched.hex
-build/$(PROJECT)_patched.hex: build/$(PROJECT).hex
-	python patch_hex.py $< $@
-
 flash: build/$(PROJECT).elf
 	openocd -f oocd.cfg -c "program build/$(PROJECT).elf verify reset exit"
