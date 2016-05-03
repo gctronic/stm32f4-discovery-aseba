@@ -8,6 +8,7 @@ extern "C" {
 #include "common/types.h"
 #include "vm/vm.h"
 #include "vm/natives.h"
+#include "parameter/parameter.h"
 
 /** Number of variables usable by the Aseba script. */
 #define VM_VARIABLES_FREE_SPACE 256
@@ -43,8 +44,8 @@ struct _vmVariables {
 	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
 };
 
-/** Inits the vmVariables struct. */
-void aseba_variables_init(AsebaVMState *vm);
+/** Declares the parameters and variables required by the Aseba application. */
+void aseba_variables_init(parameter_namespace_t *aseba_ns);
 
 /** Updates the Aseba variables from the system. */
 void aseba_read_variables_from_system(AsebaVMState *vm);

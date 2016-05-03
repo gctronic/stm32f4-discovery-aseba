@@ -31,6 +31,16 @@ sudo python -m serial.tools.miniterm /dev/ttyACM0
 ```
  assuming `/dev/ttyACM0` is where the discovery is connected
 
+### Changing node ID
+To change the node ID, open a shell to the device and enter the following commands:
+
+```
+config_set /aseba/id <new id>
+config_save
+```
+
+then reset the board
+
 ### Running unit tests
 
 When developping for this project you might want to run the unit tests to check that your work is still OK.

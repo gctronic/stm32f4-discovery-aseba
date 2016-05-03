@@ -20,7 +20,7 @@
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
-parameter_namespace_t parameter_root;
+parameter_namespace_t parameter_root, aseba_ns;
 
 static bool load_config(void)
 {
@@ -55,7 +55,15 @@ int main(void)
     usbConnectBus(serusbcfg.usbp);
 
 
-    // Initialise Aseba CAN and VM
+    // Initialise Aseba system, declaring parameters
+    parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
+    aseba_declare_parameters(&aseba_ns);
+
+    /* Load parameter tree from flash. */
+    load_config();
+
+    /* Start AsebaCAN. Must be after config was loaded because the CAN id
+     * cannot be changed at runtime. */
     aseba_vm_init();
     aseba_can_start(&vmState);
 
@@ -73,8 +81,6 @@ int main(void)
 
     demo_acc_start(&accelerometer_cb);
 
-    /* Load parameter tree from flash. */
-    load_config();
 
     shellInit();
 

@@ -2,7 +2,6 @@
 #include "hal.h"
 #include "chprintf.h"
 #include "usbcfg.h"
-#include "unique_id.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -23,6 +22,8 @@ sint16 aseba_float_to_int(float var, float max);
 unsigned int events_flags = 0;
 static uint16 vmBytecode[VM_BYTECODE_SIZE];
 static sint16 vmStack[VM_STACK_SIZE];
+
+static parameter_t nodeId_param;
 
 AsebaVMState vmState = {
     .nodeId=0, /* changed by aseba_vm_init() */
@@ -86,31 +87,13 @@ static THD_FUNCTION(aseba_vm_thd, arg)
     }
 }
 
-
-/** Returns a more or less unique node ID.*/
-static uint16_t get_unique_id(void)
-{
-    uint8_t chip_id[UNIQUE_ID_SIZE];
-    uint8_t res = 0;
-    int i;
-
-    unique_id_read(chip_id);
-
-    for (i = 0; i < UNIQUE_ID_SIZE; i++) {
-        res += chip_id[i];
-    }
-
-    return res;
-}
-
 void aseba_vm_init(void)
 {
     uint16_t bytecode_size;
-    vmState.nodeId = get_unique_id();
+
+    vmState.nodeId = parameter_integer_get(&nodeId_param);
 
     AsebaVMInit(&vmState);
-
-    aseba_variables_init(&vmState);
 
     extern uint8_t _aseba_bytecode_start;
     uint8_t *pos = &_aseba_bytecode_start;
@@ -125,6 +108,13 @@ void aseba_vm_init(void)
     }
 
     chThdSleepMilliseconds(500);
+}
+
+void aseba_declare_parameters(parameter_namespace_t *aseba_ns)
+{
+    parameter_integer_declare_with_default(&nodeId_param, aseba_ns, "id", 42);
+
+    aseba_variables_init(aseba_ns);
 }
 
 void aseba_vm_start(void)

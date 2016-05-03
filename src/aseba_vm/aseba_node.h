@@ -7,6 +7,7 @@ extern "C" {
 
 #include "common/types.h"
 #include "vm/vm.h"
+#include "parameter/parameter.h"
 
 /** Number of opcodes in an aseba bytecode script.
  *
@@ -30,6 +31,9 @@ extern AsebaVMState vmState;
 void aseba_vm_start(void);
 void accelerometer_cb(void);
 void aseba_vm_init(void);
+
+/** Declares all the parameters used by the Aseba subsystem. */
+void aseba_declare_parameters(parameter_namespace_t *aseba_ns);
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,6 @@
 #include "config_flash_storage.h"
 
 /* Struct used to share Aseba parameters between C-style API and Aseba. */
-static parameter_namespace_t aseba_ns;
 static parameter_t aseba_settings[SETTINGS_COUNT];
 static char aseba_settings_name[SETTINGS_COUNT][10];
 
@@ -44,11 +43,10 @@ const AsebaLocalEventDescription localEvents[] = {
 	{NULL, NULL}
 };
 
-void aseba_variables_init(AsebaVMState *vm)
+void aseba_variables_init(parameter_namespace_t *aseba_ns)
 {
     /* Initializes constant variables. */
     memset(&vmVariables, 0, sizeof(vmVariables));
-    vmVariables.id = vm->nodeId;
 
     vmVariables.productId = ASEBA_PID_UNDEFINED;
     vmVariables.fwversion[0] = 0;
@@ -57,13 +55,11 @@ void aseba_variables_init(AsebaVMState *vm)
     /* Registers all Aseba settings in global namespace. */
     int i;
 
-    parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
-
     /* Must be in descending order to keep them sorted on display. */
     for (i = SETTINGS_COUNT - 1; i >= 0; i--) {
         sprintf(aseba_settings_name[i], "%d", i);
         parameter_integer_declare_with_default(&aseba_settings[i],
-                                               &aseba_ns,
+                                               aseba_ns,
                                                aseba_settings_name[i],
                                                0);
     }
@@ -71,7 +67,7 @@ void aseba_variables_init(AsebaVMState *vm)
 
 void aseba_read_variables_from_system(AsebaVMState *vm)
 {
-    ASEBA_UNUSED(vm);
+    vmVariables.id = vm->nodeId;
 }
 
 void aseba_write_variables_to_system(AsebaVMState *vm)
