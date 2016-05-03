@@ -11,20 +11,6 @@ abstract: |
     This document presents how to use it.
 ---
 
-# Plan
-
-1. Intro
-2. Installing the Aseba bootloader
-    1. Building it
-    2. Flashing it
-3. Building the application with bootloader support
-4. Starting asebaswitch
-5. Flashing the application using asebacmd
-6. Exiting the bootloader
-
-TODO: Implement going into bootloader from application.
-TODO: Implement node ID sharing between the two firmwares.
-
 
 # Building the Aseba bootloader
 From the bootloader source project directory (`aseba-bootloader`), run the following commands to import and build the dependencies.
