@@ -19,3 +19,6 @@
 [submodule "src/crc"]
 	path = src/crc
 	url = https://github.com/cvra/crc
+[submodule "src/chibios-syscalls"]
+	path = src/chibios-syscalls
+	url = https://github.com/cvra/chibios-syscalls
