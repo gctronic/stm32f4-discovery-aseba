@@ -16,7 +16,7 @@ void flash_write(void *addr, const void *data, size_t len);
 
 /** Erase sector given by its base address.
  *
- * @note flash must be unlocket for this operation.
+ * @note flash must be unlocked for this operation.
  */
 void flash_sector_erase(void *addr);
 
