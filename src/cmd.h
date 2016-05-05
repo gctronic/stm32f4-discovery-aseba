@@ -1,7 +1,8 @@
 #ifndef _CMD_H_
 #define _CMD_H_
 
-#include <shell.h>
-extern const ShellCommand shell_commands[];
+#include <ch.h>
+
+void shell_start(BaseSequentialStream *chp);
 
 #endif /* _CMD_H_ */

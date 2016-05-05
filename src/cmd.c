@@ -340,3 +340,16 @@ const ShellCommand shell_commands[] = {
     {"config_erase", cmd_config_erase},
     {NULL, NULL}
 };
+
+
+void shell_start(BaseSequentialStream *interface)
+{
+    static THD_WORKING_AREA(wa, 2048);
+    static ShellConfig shell_cfg;
+
+    shell_cfg.sc_channel = interface;
+    shell_cfg.sc_commands = shell_commands;
+
+    shellInit();
+    shellCreateStatic(&shell_cfg, wa, sizeof(wa), NORMALPRIO);
+}

@@ -34,8 +34,6 @@ static bool load_config(void)
 
 int main(void)
 {
-    thread_t *shelltp = NULL;
-
     halInit();
     chSysInit();
     mpu_init();
@@ -84,25 +82,11 @@ int main(void)
     demo_acc_start(accelerometer_cb);
     demo_button_start(button_cb);
 
+    /* Start shell on the USB port. */
+    shell_start((BaseSequentialStream *)&SDU1);
 
-    shellInit();
-
-    static const ShellConfig shell_cfg1 = {
-        (BaseSequentialStream *)&SDU1,
-        shell_commands
-    };
-
-    while (TRUE) {
-        if (!shelltp) {
-            if (SDU1.config->usbp->state == USB_ACTIVE) {
-                shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);
-            }
-        } else {
-            if (chThdTerminatedX(shelltp)) {
-                chThdRelease(shelltp);
-                shelltp = NULL;
-            }
-        }
-        chThdSleepMilliseconds(500);
+    /* Infinite loop, do nothing. */
+    while (1) {
+        chThdSleepMilliseconds(1000);
     }
 }
