@@ -11,7 +11,7 @@ accelerometer_callback acc_callback;
 
 static THD_WORKING_AREA(waAcceleroThd, 128);
 static THD_FUNCTION(AcceleroThd, arg) {
-    static int8_t xbuf[4], ybuf[4], zbuf[4];
+    static int32_t xbuf[4], ybuf[4], zbuf[4];
     systime_t time;
 
     (void)arg;
@@ -36,12 +36,9 @@ static THD_FUNCTION(AcceleroThd, arg) {
         zbuf[0] = (int8_t)lis302dlReadRegister(&SPID1, LIS302DL_OUTZ);
 
         /* Calculating average of the latest four accelerometer readings.*/
-        acc_sample.acceleration[0] =
-            ((int32_t)xbuf[0] + (int32_t)xbuf[1] + (int32_t)xbuf[2] + (int32_t)xbuf[3]) / 4;
-        acc_sample.acceleration[1] =
-            ((int32_t)ybuf[0] + (int32_t)ybuf[1] + (int32_t)ybuf[2] + (int32_t)ybuf[3]) / 4;
-        acc_sample.acceleration[2] =
-            ((int32_t)zbuf[0] + (int32_t)zbuf[1] + (int32_t)zbuf[2] + (int32_t)zbuf[3]) / 4;
+        acc_sample.acceleration[0] = (xbuf[0] + xbuf[1] + xbuf[2] + xbuf[3]) / 4;
+        acc_sample.acceleration[1] = (ybuf[0] + ybuf[1] + ybuf[2] + ybuf[3]) / 4;
+        acc_sample.acceleration[2] = (zbuf[0] + zbuf[1] + zbuf[2] + zbuf[3]) / 4;
 
         acc_callback();
 
