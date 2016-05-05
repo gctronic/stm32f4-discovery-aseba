@@ -4,6 +4,7 @@
 #include "ch.h"
 #include "hal.h"
 
+#include "aseba_node.h"
 #include "skel_user.h"
 
 #include "vm/natives.h"
@@ -12,6 +13,7 @@
 #include "common/consts.h"
 #include "main.h"
 #include "config_flash_storage.h"
+#include "discovery_demo/accelerometer.h"
 
 /* Struct used to share Aseba parameters between C-style API and Aseba. */
 static parameter_t aseba_settings[SETTINGS_COUNT];
@@ -78,6 +80,22 @@ void aseba_write_variables_to_system(AsebaVMState *vm)
     for (i = 3; i <= 6; i++) {
         demo_led_set(i, vmVariables.leds[i - 1]);
     }
+}
+
+// This function must update the accelerometer variables
+void accelerometer_cb(void)
+{
+    static float accf[3];
+    demo_acc_get_acc(accf);
+    vmVariables.acc[0] = (sint16) accf[0];
+    vmVariables.acc[1] = (sint16) accf[1];
+    vmVariables.acc[2] = (sint16) accf[2];
+    SET_EVENT(EVENT_ACC);
+}
+
+void button_cb(void)
+{
+    SET_EVENT(EVENT_BUTTON);
 }
 
 
@@ -234,3 +252,4 @@ AsebaNativeFunctionPointer nativeFunctions[] = {
 };
 
 const int nativeFunctions_length = sizeof(nativeFunctions) / sizeof(nativeFunctions[0]);
+

@@ -54,6 +54,9 @@ void aseba_read_variables_from_system(AsebaVMState *vm);
 /** Updates the system from the Aseba variables. */
 void aseba_write_variables_to_system(AsebaVMState *vm);
 
+void accelerometer_cb(void);
+void button_cb(void);
+
 extern struct _vmVariables vmVariables;
 
 extern const AsebaVMDescription vmDescription;

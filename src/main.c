@@ -16,6 +16,7 @@
 #include "discovery_demo/button.h"
 
 #include "aseba_vm/aseba_node.h"
+#include "aseba_vm/skel_user.h"
 #include "aseba_vm/aseba_can_interface.h"
 #include "aseba_vm/aseba_bridge.h"
 
@@ -80,8 +81,8 @@ int main(void)
         aseba_vm_start();
     }
 
-    demo_acc_start(&accelerometer_cb);
-    demo_button_start();
+    demo_acc_start(accelerometer_cb);
+    demo_button_start(button_cb);
 
 
     shellInit();

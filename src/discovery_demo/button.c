@@ -13,7 +13,7 @@ static void wait_for_state(bool state)
 
 static THD_FUNCTION(button_thd, p)
 {
-    (void) p;
+    void (*callback)(void) = p;
 
     chRegSetThreadName("aseba-button");
 
@@ -30,13 +30,13 @@ static THD_FUNCTION(button_thd, p)
         /* Debounce button. */
         chThdSleepMilliseconds(10);
 
-        /* Signal the event to the Aseba virtual machine. */
-        SET_EVENT(EVENT_BUTTON);
+        /* Call back into user provided code. */
+        callback();
     }
 }
 
-void demo_button_start(void)
+void demo_button_start(button_callback cb)
 {
     static THD_WORKING_AREA(wa, 1024);
-    chThdCreateStatic(wa, sizeof(wa), NORMALPRIO, button_thd, NULL);
+    chThdCreateStatic(wa, sizeof(wa), NORMALPRIO, button_thd, cb);
 }

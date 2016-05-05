@@ -190,14 +190,3 @@ void AsebaWriteBytecode(AsebaVMState *vm)
     flash_lock();
 }
 
-// This function must update the accelerometer variables
-// FIXME: This should be moved to skel_user.c
-void accelerometer_cb(void)
-{
-    static float accf[3];
-    demo_acc_get_acc(accf);
-    vmVariables.acc[0] = (sint16) accf[0];
-    vmVariables.acc[1] = (sint16) accf[1];
-    vmVariables.acc[2] = (sint16) accf[2];
-    SET_EVENT(EVENT_ACC);
-}
