@@ -40,6 +40,7 @@ const AsebaVMDescription vmDescription = {
 // Event descriptions
 const AsebaLocalEventDescription localEvents[] = {
     {"new_acc", "New accelerometer measurement"},
+    {"button", "User button clicked"},
 	{NULL, NULL}
 };
 

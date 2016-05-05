@@ -22,6 +22,7 @@ extern "C" {
 enum AsebaLocalEvents
 {
 	EVENT_ACC = 0, // New accelerometer measurement
+	EVENT_BUTTON, // Button click
 };
 
 

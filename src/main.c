@@ -13,6 +13,7 @@
 
 #include "discovery_demo/accelerometer.h"
 #include "discovery_demo/leds.h"
+#include "discovery_demo/button.h"
 
 #include "aseba_vm/aseba_node.h"
 #include "aseba_vm/aseba_can_interface.h"
@@ -80,6 +81,7 @@ int main(void)
     }
 
     demo_acc_start(&accelerometer_cb);
+    demo_button_start();
 
 
     shellInit();
