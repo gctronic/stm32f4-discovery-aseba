@@ -3,6 +3,7 @@ dependency-dir: src/
 depends:
     - parameter
     - crc
+    - chibios-syscalls
 
 source:
     - src/config_flash_storage.c
@@ -16,7 +17,6 @@ target.arm:
     - src/cmd.c
     - src/main.c
     - src/usbcfg.c
-    - src/malloc_lock.c
     - src/memory_protection.c
     - src/flash/flash.c
     - src/discovery_demo/leds.c

@@ -6,7 +6,6 @@
 #include "shell.h"
 #include "usbcfg.h"
 #include "cmd.h"
-#include "malloc_lock.h"
 #include "memory_protection.h"
 #include "main.h"
 #include "config_flash_storage.h"

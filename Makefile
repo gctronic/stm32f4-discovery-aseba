@@ -131,7 +131,6 @@ CSRC += $(STARTUPSRC) \
         $(BOARDSRC) \
         $(TESTSRC) \
         $(CHIBIOS)/os/various/shell.c \
-        $(CHIBIOS)/os/various/syscalls.c \
         $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
         $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
         $(CHIBIOS)/os/various/devices_lib/accel/lis302dl.c \
@@ -220,6 +219,8 @@ CPPWARN = -Wall -Wextra -Wundef
 
 # List all user C define here, like -D_DEBUG=1
 UDEFS =
+
+UDEFS += -DSTDOUT_SD=SDU1 -DSTDIN_SD=SDU1
 
 ifeq ($(USE_ASEBA_BOOTLOADER),yes)
 	UDEFS += -DCORTEX_VTOR_INIT=0x08020000
