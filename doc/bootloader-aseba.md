@@ -6,7 +6,7 @@ urlcolor: blue
 linkcolor: black
 abstract: |
     The Aseba programming environment includes a bootloader protocol that can be used to upgrade nodes over different transport layers.
-    Currently, this includes TCP, HTTP, CAN and serial ports.
+    Currently, this includes CAN and serial ports, which can be tunnelled via TCP or HTTP using `asebaswitch`.
     A port of the Aseba bootloader for STM32 was implemented, supporting upgrade via CAN.
     This document presents how to use it.
 ---
@@ -36,7 +36,7 @@ Once the device is attached, simply entering `make flash` will program the devic
 
 # Building the application with bootloader support
 
-![Flash layout comparison when building with or without bootloader. We can see that the data sections containing Aseba bytecode and configuration data are at the same location in both cases. This allows the user to add or remove the bootloader without losing their settings or programmed bytecode.](flash_layout.png)
+![Flash layout comparison when building with or without bootloader. Data sections containing Aseba bytecode and configuration data stay at the same location. This allows the user to add or remove the bootloader without losing their settings or programmed bytecode.](flash_layout.png)
 
 
 The application should be recompiled with bootloader support because its vector table and the bootloader's will overlap causing issues.
