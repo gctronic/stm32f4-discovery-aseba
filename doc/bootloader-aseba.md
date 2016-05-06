@@ -36,6 +36,9 @@ Once the device is attached, simply entering `make flash` will program the devic
 
 # Building the application with bootloader support
 
+![Flash layout comparison when building with or without bootloader. We can see that the data sections containing Aseba bytecode and configuration data are at the same location in both cases. This allows the user to add or remove the bootloader without losing their settings or programmed bytecode.](flash_layout.png)
+
+
 The application should be recompiled with bootloader support because its vector table and the bootloader's will overlap causing issues.
 First, switch back to the discovery project directory (`cd ..`)
 
