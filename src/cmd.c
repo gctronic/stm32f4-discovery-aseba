@@ -14,6 +14,7 @@
 #include "config_flash_storage.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
+#define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
 static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[])
 {
@@ -341,15 +342,37 @@ const ShellCommand shell_commands[] = {
     {NULL, NULL}
 };
 
-
-void shell_start(BaseSequentialStream *interface)
+static THD_FUNCTION(shell_spawn_thd, p)
 {
-    static THD_WORKING_AREA(wa, 2048);
-    static ShellConfig shell_cfg;
+    (void) p;
+    thread_t *shelltp = NULL;
 
-    shell_cfg.sc_channel = interface;
-    shell_cfg.sc_commands = shell_commands;
+    static const ShellConfig shell_cfg = {
+        (BaseSequentialStream *)&SDU1,
+        shell_commands
+    };
 
     shellInit();
-    shellCreateStatic(&shell_cfg, wa, sizeof(wa), NORMALPRIO);
+
+    while (TRUE) {
+        if (!shelltp) {
+            if (SDU1.config->usbp->state == USB_ACTIVE) {
+                shelltp = shellCreate(&shell_cfg, SHELL_WA_SIZE, NORMALPRIO);
+            }
+        } else {
+            if (chThdTerminatedX(shelltp)) {
+                chThdRelease(shelltp);
+                shelltp = NULL;
+            }
+        }
+    chThdSleepMilliseconds(500);
+    }
+}
+
+
+void shell_start(void)
+{
+    static THD_WORKING_AREA(wa, 2048);
+
+    chThdCreateStatic(wa, sizeof(wa), NORMALPRIO, shell_spawn_thd, NULL);
 }

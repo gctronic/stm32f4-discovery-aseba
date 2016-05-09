@@ -82,7 +82,7 @@ int main(void)
     demo_button_start(button_cb);
 
     /* Start shell on the USB port. */
-    shell_start((BaseSequentialStream *)&SDU1);
+    shell_start();
 
     /* Infinite loop, do nothing. */
     while (1) {
