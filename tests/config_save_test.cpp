@@ -6,6 +6,8 @@
 #include <cstring>
 #include "crc/crc32.h"
 
+#define HEADER_SIZE (3 * sizeof(uint32_t))
+
 TEST_GROUP(ConfigSaveTestCase)
 {
     uint8_t data[128];
@@ -31,8 +33,10 @@ TEST(ConfigSaveTestCase, SavingConfigLockUnlock)
 
     mock("flash").expectOneCall("unlock");
     mock("flash").expectOneCall("erase").withParameter("sector", data);
-    mock("flash").expectOneCall("write"); // Empty map
-    mock("flash").expectOneCall("write"); // CRC
+    mock("flash").expectOneCall("write"); // data
+    mock("flash").expectOneCall("write"); // CRC(len)
+    mock("flash").expectOneCall("write"); // len
+    mock("flash").expectOneCall("write"); // crc(data)
     mock("flash").expectOneCall("lock");
 
     config_save(data, sizeof(data), &ns);
@@ -62,7 +66,7 @@ TEST(ConfigSaveTestCase, SavingConfigWorks)
     // Check that the flash writer is used
     // Number of expected written bytes is implementation-dependent
     // Change if if necessary
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 8; i++) {
         mock("flash").expectOneCall("write");
     }
 
@@ -72,28 +76,14 @@ TEST(ConfigSaveTestCase, SavingConfigWorks)
     CHECK_EQUAL(20, parameter_integer_get(parameter_find(&ns, "/foo")));
 
     // Loads the config back from saved state
-    // We add an offset to skip the CRC
-    size_t offset = sizeof(uint32_t);
+    // We add an offset to skip the CRC and the block length
     parameter_msgpack_read(&ns,
-                           (char *)(&data[offset]),
-                           sizeof(data) - offset,
+                           (char *)(&data[HEADER_SIZE]),
+                           sizeof(data) - HEADER_SIZE,
                            err_cb, NULL);
 
     // Check that the parameter has the same value as saved
     CHECK_EQUAL(10, parameter_integer_get(parameter_find(&ns, "/foo")));
-}
-
-TEST(ConfigSaveTestCase, CRCCheck)
-{
-    uint32_t crc, expected_crc;
-    size_t offset = sizeof(crc);
-
-    config_save(data, sizeof(data), &ns);
-
-    expected_crc = crc32(0, &data[offset], sizeof(data)-offset);
-    memcpy(&crc, data, sizeof(expected_crc));
-
-    CHECK_EQUAL(expected_crc, crc);
 }
 
 TEST_GROUP(ConfigLoadTestCase)
@@ -123,8 +113,8 @@ TEST(ConfigLoadTestCase, SimpleLoad)
     auto res = config_load(&ns, data, sizeof(data));
 
     // Value should be back to what it was
-    CHECK_EQUAL(20, parameter_integer_get(&foo));
     CHECK_TRUE(res);
+    CHECK_EQUAL(20, parameter_integer_get(&foo));
 }
 
 TEST(ConfigLoadTestCase, CRCIsChecked)
@@ -166,3 +156,60 @@ TEST(ConfigLoadTestCase, InvalidConfigReturnsFalse)
     CHECK_FALSE(res);
 }
 
+TEST_GROUP(BlockValidityTestGroup)
+{
+    static const size_t header_len = 3 * sizeof(uint32_t);
+    uint8_t block[256 + header_len];
+    uint32_t checksum, header_checksum;
+    uint32_t length = 256;
+    size_t offset = 0;
+
+    void setup()
+    {
+        memset(block, 0, sizeof(block));
+        checksum = crc32(0xdeadbeef, &block[header_len], 256);
+        header_checksum = crc32(0xdeadbeef, &length, sizeof(length));
+
+        /* Copy length CRC. */
+        memcpy(&block[offset], &header_checksum, sizeof(header_checksum));
+        offset += sizeof(uint32_t);
+
+        /* Copy length */
+        memcpy(&block[offset], &length, sizeof(length));
+        offset += sizeof(uint32_t);
+
+        /* Copy block CRC. */
+        memcpy(&block[offset], &checksum, sizeof(checksum));
+    }
+
+};
+
+TEST(BlockValidityTestGroup, DefaultBlockIsValid)
+{
+    CHECK_TRUE(config_block_is_valid(block));
+}
+
+TEST(BlockValidityTestGroup, InvalidLengthChecksumMakesItInvalid)
+{
+    block[0] ^= 0xaa;
+    CHECK_FALSE(config_block_is_valid(block));
+}
+
+TEST(BlockValidityTestGroup, InvalidLengthIsInvalid)
+{
+    block[5] ^= 0xaa;
+    CHECK_FALSE(config_block_is_valid(block));
+}
+
+TEST(BlockValidityTestGroup, InvalidDataCheckSumIsInvalid)
+{
+    block[127] ^= 0xaa;
+    CHECK_FALSE(config_block_is_valid(block));
+}
+
+TEST(BlockValidityTestGroup, FreshFlashIsInvalid)
+{
+    /* Checks that a fresh flash page (all 0xff) is invalid. */
+    memset(block, 0xff, sizeof(block));
+    CHECK_FALSE(config_block_is_valid(block));
+}

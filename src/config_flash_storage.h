@@ -23,6 +23,9 @@ void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns);
  */
 bool config_load(parameter_namespace_t *ns, void *src, size_t src_len);
 
+/** Returns true if the block at the given address has a valid checksum. */
+bool config_block_is_valid(void *block);
+
 #ifdef __cplusplus
 }
 #endif
