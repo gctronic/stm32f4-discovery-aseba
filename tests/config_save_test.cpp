@@ -6,8 +6,6 @@
 #include <cstring>
 #include "crc/crc32.h"
 
-#define HEADER_SIZE (3 * sizeof(uint32_t))
-
 TEST_GROUP(ConfigSaveTestCase)
 {
     uint8_t data[128];
@@ -78,8 +76,8 @@ TEST(ConfigSaveTestCase, SavingConfigWorks)
     // Loads the config back from saved state
     // We add an offset to skip the CRC and the block length
     parameter_msgpack_read(&ns,
-                           (char *)(&data[HEADER_SIZE]),
-                           sizeof(data) - HEADER_SIZE,
+                           (char *)(&data[CONFIG_HEADER_SIZE]),
+                           sizeof(data) - CONFIG_HEADER_SIZE,
                            err_cb, NULL);
 
     // Check that the parameter has the same value as saved
@@ -158,28 +156,15 @@ TEST(ConfigLoadTestCase, InvalidConfigReturnsFalse)
 
 TEST_GROUP(BlockValidityTestGroup)
 {
-    static const size_t header_len = 3 * sizeof(uint32_t);
-    uint8_t block[256 + header_len];
-    uint32_t checksum, header_checksum;
-    uint32_t length = 256;
-    size_t offset = 0;
+    uint8_t block[256 + CONFIG_HEADER_SIZE];
 
     void setup()
     {
         memset(block, 0, sizeof(block));
-        checksum = crc32(0xdeadbeef, &block[header_len], 256);
-        header_checksum = crc32(0xdeadbeef, &length, sizeof(length));
 
-        /* Copy length CRC. */
-        memcpy(&block[offset], &header_checksum, sizeof(header_checksum));
-        offset += sizeof(uint32_t);
-
-        /* Copy length */
-        memcpy(&block[offset], &length, sizeof(length));
-        offset += sizeof(uint32_t);
-
-        /* Copy block CRC. */
-        memcpy(&block[offset], &checksum, sizeof(checksum));
+        mock("flash").disable();
+        config_write_block_header(block, sizeof(block) - CONFIG_HEADER_SIZE);
+        mock("flash").enable();
     }
 
 };

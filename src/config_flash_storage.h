@@ -7,6 +7,8 @@ extern "C" {
 
 #include "parameter/parameter.h"
 
+#define CONFIG_HEADER_SIZE (3 * sizeof(uint32_t))
+
 /** Erase config sector.
  */
 void config_erase(void *dst);
@@ -25,6 +27,12 @@ bool config_load(parameter_namespace_t *ns, void *src, size_t src_len);
 
 /** Returns true if the block at the given address has a valid checksum. */
 bool config_block_is_valid(void *block);
+
+/** Writes a header for the block at the address dst.
+ *
+ * @note The block first bytes (CONFIG_HEADER_SIZE) must be available to write
+ * the checksum to the block. */
+void config_write_block_header(void *dst, uint32_t len);
 
 #ifdef __cplusplus
 }

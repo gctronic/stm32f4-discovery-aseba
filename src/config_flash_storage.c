@@ -9,26 +9,6 @@
 /* We cannot use a CRC start value of 0 because CRC(0, 0xffffffff) = 0xffffffff
  * which makes empty flash pages valid. */
 #define CRC_INITIAL_VALUE 0xdeadbeef
-#define HEADER_SIZE (3 * sizeof(uint32_t))
-
-static void config_write_block_header(void *dst, uint32_t len)
-{
-    uint32_t crc;
-    size_t offset = 0;
-
-    /* First write length checksum. */
-    crc = crc32(CRC_INITIAL_VALUE, &len, sizeof(uint32_t));
-    flash_write(dst + offset, &crc, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    /* Then write the length itself. */
-    flash_write(dst + offset, &len, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    /* Then write the data checksum. */
-    crc = crc32(CRC_INITIAL_VALUE, dst + HEADER_SIZE, len);
-    flash_write(dst + offset, &crc, sizeof(uint32_t));
-}
 
 
 static size_t cmp_flash_writer(struct cmp_ctx_s *ctx, const void *data, size_t len)
@@ -57,7 +37,7 @@ void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns)
     uint32_t len;
 
     cmp_mem_access_init(&cmp, &mem,
-                        dst + HEADER_SIZE, dst_len - HEADER_SIZE);
+                        dst + CONFIG_HEADER_SIZE, dst_len - CONFIG_HEADER_SIZE);
 
     /* Replace the RAM writer with the special writer for flash. */
     cmp.write = cmp_flash_writer;
@@ -82,7 +62,7 @@ bool config_load(parameter_namespace_t *ns, void *src, size_t src_len)
         return false;
     }
 
-    res = parameter_msgpack_read(ns, src + HEADER_SIZE, src_len - HEADER_SIZE,
+    res = parameter_msgpack_read(ns, src + CONFIG_HEADER_SIZE, src_len - CONFIG_HEADER_SIZE,
                                  NULL, NULL);
 
     if (res != 0) {
@@ -122,3 +102,23 @@ bool config_block_is_valid(void *p)
 
     return true;
 }
+
+void config_write_block_header(void *dst, uint32_t len)
+{
+    uint32_t crc;
+    size_t offset = 0;
+
+    /* First write length checksum. */
+    crc = crc32(CRC_INITIAL_VALUE, &len, sizeof(uint32_t));
+    flash_write(dst + offset, &crc, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    /* Then write the length itself. */
+    flash_write(dst + offset, &len, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    /* Then write the data checksum. */
+    crc = crc32(CRC_INITIAL_VALUE, dst + CONFIG_HEADER_SIZE, len);
+    flash_write(dst + offset, &crc, sizeof(uint32_t));
+}
+
