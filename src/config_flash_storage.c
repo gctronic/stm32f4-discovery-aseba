@@ -11,6 +11,25 @@
 #define CRC_INITIAL_VALUE 0xdeadbeef
 #define HEADER_SIZE (3 * sizeof(uint32_t))
 
+static void config_write_block_header(void *dst, uint32_t len)
+{
+    uint32_t crc;
+    size_t offset = 0;
+
+    /* First write length checksum. */
+    crc = crc32(CRC_INITIAL_VALUE, &len, sizeof(uint32_t));
+    flash_write(dst + offset, &crc, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    /* Then write the length itself. */
+    flash_write(dst + offset, &len, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    /* Then write the data checksum. */
+    crc = crc32(CRC_INITIAL_VALUE, dst + HEADER_SIZE, len);
+    flash_write(dst + offset, &crc, sizeof(uint32_t));
+}
+
 
 static size_t cmp_flash_writer(struct cmp_ctx_s *ctx, const void *data, size_t len)
 {
@@ -35,8 +54,7 @@ void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns)
 {
     cmp_ctx_t cmp;
     cmp_mem_access_t mem;
-    uint32_t crc, len;
-    size_t offset = 0;
+    uint32_t len;
 
     cmp_mem_access_init(&cmp, &mem,
                         dst + HEADER_SIZE, dst_len - HEADER_SIZE);
@@ -50,18 +68,7 @@ void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns)
 
     len = cmp_mem_access_get_pos(&mem);
 
-    /* First write length checksum. */
-    crc = crc32(CRC_INITIAL_VALUE, &len, sizeof(uint32_t));
-    flash_write(dst + offset, &crc, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    /* Then write the length itself. */
-    flash_write(dst + offset, &len, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    /* Then write the data checksum. */
-    crc = crc32(CRC_INITIAL_VALUE, dst + HEADER_SIZE, len);
-    flash_write(dst + offset, &crc, sizeof(uint32_t));
+    config_write_block_header(dst, len);
 
     flash_lock();
 }
