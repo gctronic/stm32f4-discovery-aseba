@@ -30,21 +30,59 @@ void config_erase(void *dst)
     flash_lock();
 }
 
+static void err_mark_false(void *arg, const char *id, const char *err)
+{
+    (void) id;
+    (void) err;
+
+    bool *b = (bool *)arg;
+    *b = false;
+}
+
 void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns)
 {
     cmp_ctx_t cmp;
     cmp_mem_access_t mem;
     uint32_t len;
+    bool success = true;
+
+    void *orig_dst = dst;
+
+    flash_unlock();
+
+    /* If there is no valid block, erase flash just to start from a pristine
+     * state. */
+    if (config_block_find_last_used(dst) == NULL) {
+        flash_sector_erase(dst);
+    }
+
+    /* Find first available flash block. */
+    dst = config_block_find_first_free(dst);
+
+    len = dst_len - (dst - orig_dst);
+
+    /* If the destination is too small to fit even the header, erase the block. */
+    if (len <= CONFIG_HEADER_SIZE) {
+        flash_sector_erase(orig_dst);
+        dst = orig_dst;
+        len = dst_len;
+    }
 
     cmp_mem_access_init(&cmp, &mem,
-                        dst + CONFIG_HEADER_SIZE, dst_len - CONFIG_HEADER_SIZE);
+                        dst + CONFIG_HEADER_SIZE, len - CONFIG_HEADER_SIZE);
 
     /* Replace the RAM writer with the special writer for flash. */
     cmp.write = cmp_flash_writer;
 
-    flash_unlock();
-    flash_sector_erase(dst);
-    parameter_msgpack_write_cmp(ns, &cmp, NULL, NULL);
+    /* Tries to write the config. If there is an error the callback will set
+     * success to false. */
+    parameter_msgpack_write_cmp(ns, &cmp, err_mark_false, &success);
+
+    if (success == false) {
+        flash_sector_erase(orig_dst);
+        flash_lock();
+        return config_save(orig_dst, dst_len, ns);
+    }
 
     len = cmp_mem_access_get_pos(&mem);
 
@@ -53,16 +91,21 @@ void config_save(void *dst, size_t dst_len, parameter_namespace_t *ns)
     flash_lock();
 }
 
-bool config_load(parameter_namespace_t *ns, void *src, size_t src_len)
+bool config_load(parameter_namespace_t *ns, void *src)
 {
     int res;
+    uint32_t src_len;
 
-    /* Compare checksum of the data block with header. */
-    if (!config_block_is_valid(src)) {
+    src = config_block_find_last_used(src);
+
+    /* If no valid block was found signal an error. */
+    if (src == NULL) {
         return false;
     }
 
-    res = parameter_msgpack_read(ns, src + CONFIG_HEADER_SIZE, src_len - CONFIG_HEADER_SIZE,
+    src_len = config_block_get_length(src);
+
+    res = parameter_msgpack_read(ns, src + CONFIG_HEADER_SIZE, src_len,
                                  NULL, NULL);
 
     if (res != 0) {
@@ -122,3 +165,35 @@ void config_write_block_header(void *dst, uint32_t len)
     flash_write(dst + offset, &crc, sizeof(uint32_t));
 }
 
+uint32_t config_block_get_length(void *block)
+{
+    uint32_t *header = (uint32_t *) block;
+
+    return header[1];
+}
+
+void *config_block_find_last_used(void *p)
+{
+    uint8_t *block = (uint8_t *)p;
+    uint8_t *last = NULL;
+
+    while (config_block_is_valid(block)) {
+        last = block;
+        block += config_block_get_length(block);
+        block += CONFIG_HEADER_SIZE;
+    }
+
+    return last;
+}
+
+void *config_block_find_first_free(void *p)
+{
+    uint8_t *block = (uint8_t *)p;
+
+    while (config_block_is_valid(block)) {
+        block += config_block_get_length(block);
+        block += CONFIG_HEADER_SIZE;
+    }
+
+    return block;
+}

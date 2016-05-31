@@ -20,6 +20,7 @@ TEST_GROUP(ConfigSaveTestCase)
 
 TEST(ConfigSaveTestCase, SavingConfigErasesPages)
 {
+    // In case we cannot find a valid block we erase the sector, just in case
     mock("flash").expectOneCall("erase").withParameter("sector", data);
 
     config_save(data, sizeof(data), &ns);
@@ -108,7 +109,7 @@ TEST(ConfigLoadTestCase, SimpleLoad)
     parameter_integer_set(&foo, 10);
 
     // Load the tree
-    auto res = config_load(&ns, data, sizeof(data));
+    auto res = config_load(&ns, data);
 
     // Value should be back to what it was
     CHECK_TRUE(res);
@@ -128,7 +129,7 @@ TEST(ConfigLoadTestCase, CRCIsChecked)
     data[0] ^= 0x40;
 
     // Load the tree
-    auto res = config_load(&ns, data, sizeof(data));
+    auto res = config_load(&ns, data);
 
     // Value should not have changed
     CHECK_FALSE(res);
@@ -149,7 +150,7 @@ TEST(ConfigLoadTestCase, InvalidConfigReturnsFalse)
     parameter_integer_declare(&foo, &ns, "bar");
 
     // Try to load it
-    auto res = config_load(&ns, data, sizeof(data));
+    auto res = config_load(&ns, data);
 
     CHECK_FALSE(res);
 }
@@ -197,4 +198,155 @@ TEST(BlockValidityTestGroup, FreshFlashIsInvalid)
     /* Checks that a fresh flash page (all 0xff) is invalid. */
     memset(block, 0xff, sizeof(block));
     CHECK_FALSE(config_block_is_valid(block));
+}
+
+TEST_GROUP(BlockGetLengthTestCase)
+{
+    uint8_t block[10 + CONFIG_HEADER_SIZE];
+};
+
+TEST(BlockGetLengthTestCase, CanGetBlockLength)
+{
+    mock("flash").disable();
+    config_write_block_header(block, 10);
+    mock("flash").enable();
+
+    auto res = config_block_get_length(block);
+
+    CHECK_EQUAL(10, res);
+}
+
+TEST_GROUP(FindFirstValidBlockTestGroup)
+{
+    uint8_t block[256];
+};
+
+TEST(FindFirstValidBlockTestGroup, ReturnsFirstPartofTheBlock)
+{
+    auto first_block = config_block_find_first_free(block);
+    POINTERS_EQUAL(&block[0], first_block);
+}
+
+TEST(FindFirstValidBlockTestGroup, SkipsAlreadyUsedBlocks)
+{
+    mock("flash").disable();
+    config_write_block_header(block, 10);
+    auto first_block = config_block_find_first_free(block);
+
+    POINTERS_EQUAL(&block[10 + CONFIG_HEADER_SIZE], first_block);
+}
+
+TEST(FindFirstValidBlockTestGroup, FindNoUsedBlockReturnsNULL)
+{
+    auto last_block = config_block_find_last_used(block);
+    POINTERS_EQUAL(NULL, last_block);
+}
+
+TEST(FindFirstValidBlockTestGroup, FindLastUsedBlock)
+{
+    mock("flash").disable();
+    config_write_block_header(block, 10);
+
+    POINTERS_EQUAL(block, config_block_find_last_used(block));
+}
+
+TEST_GROUP(ConfigLoadBalancingTestGroup)
+{
+    parameter_namespace_t ns;
+    uint8_t block[256];
+
+    void setup()
+    {
+        mock("flash").ignoreOtherCalls();
+        parameter_namespace_declare(&ns, NULL, NULL);
+    }
+
+};
+
+TEST(ConfigLoadBalancingTestGroup, ConfigSavingIsLoadBalanced)
+{
+    // Checks that saving a config declares a new block at the end of the flash
+    // config page.
+
+    // First, declare a parameter
+    parameter_t p;
+    parameter_integer_declare(&p, &ns, "foo");
+    parameter_integer_set(&p, 10);
+
+    // Checks that the first save is done on the first block
+    config_save(block, sizeof(block), &ns);
+    POINTERS_EQUAL(block, config_block_find_last_used(block));
+
+    // Checks that the second save is on the second block
+    auto second_block = config_block_find_first_free(block);
+    config_save(block, sizeof(block), &ns);
+    POINTERS_EQUAL(second_block, config_block_find_last_used(block));
+}
+
+TEST(ConfigLoadBalancingTestGroup, CanLoadCorrectBlock)
+{
+    // Checks that config page loading chooses the latest version correctly
+
+    // First, declare a parameter
+    parameter_t p;
+    parameter_integer_declare(&p, &ns, "foo");
+
+    // Give it a value then save
+    parameter_integer_set(&p, 1);
+    config_save(block, sizeof(block), &ns);
+
+    // Give it a value again then save
+    parameter_integer_set(&p, 2);
+    config_save(block, sizeof(block), &ns);
+
+    // Finally load it from flash and see if latest version was used
+    parameter_integer_set(&p, 3);
+
+    auto res = config_load(&ns, block);
+    CHECK_TRUE(res);
+    CHECK_EQUAL(2, parameter_integer_get(&p));
+}
+
+TEST(ConfigLoadBalancingTestGroup, CanErasePageIfNotenoughSpaceLeft)
+{
+    // Checks that we erase the whole block if we don't have enough space left
+    // to write the config header
+
+    uint8_t block[30];
+
+    parameter_t p;
+    parameter_integer_declare(&p, &ns, "foo");
+
+    // Give it a value then save
+    parameter_integer_set(&p, 1);
+
+    config_save(block, sizeof(block), &ns);
+
+    // We used 10 + CONFIG_HEADER_SIZE bytes, so there is not enough free space
+    // available for the header
+    CHECK_EQUAL(10, config_block_get_length(block));
+
+    mock("flash").expectOneCall("erase").withParameter("sector", block);
+    config_save(block, sizeof(block), &ns);
+}
+
+TEST(ConfigSaveTestCase, CanErasePageIfNotenoughSpaceLeftForData)
+{
+    uint8_t block[36];
+
+    parameter_t p;
+    parameter_integer_declare(&p, &ns, "foo");
+
+    // Give it a value then save
+    parameter_integer_set(&p, 1);
+
+    config_save(block, sizeof(block), &ns);
+
+    // We used 10 + CONFIG_HEADER_SIZE bytes, so there is not enough free space
+    // available
+    CHECK_EQUAL(10, config_block_get_length(block));
+
+    mock("flash").expectOneCall("erase").withParameter("sector", block);
+    mock("flash").expectOneCall("erase").withParameter("sector", block);
+    config_save(block, sizeof(block), &ns);
 }
