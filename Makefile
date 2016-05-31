@@ -9,6 +9,9 @@ ifeq ($(USE_OPT),)
 
   # Aseba doesn't build with strict aliasing
   USE_OPT += -fno-strict-aliasing
+
+  # Protection against stack overflows
+  USE_OPT += -fstack-protector-all -L .
 endif
 
 # C specific options here (added to USE_OPT).
