@@ -283,7 +283,7 @@ static void cmd_config_erase(BaseSequentialStream *chp, int argc, char **argv)
     (void) argc;
     (void) argv;
     (void) chp;
-    extern uint32_t _config_start;
+    extern uint8_t _config_start;
 
     config_erase(&_config_start);
 }
@@ -292,7 +292,7 @@ static void cmd_config_save(BaseSequentialStream *chp, int argc, char **argv)
 {
     (void) argc;
     (void) argv;
-    extern uint32_t _config_start, _config_end;
+    extern uint8_t _config_start, _config_end;
     size_t len = (size_t)(&_config_end - &_config_start);
     bool success;
 
@@ -300,7 +300,7 @@ static void cmd_config_save(BaseSequentialStream *chp, int argc, char **argv)
     config_save(&_config_start, len, &parameter_root);
 
     // Second try to read it back, see if we failed
-    success = config_load(&parameter_root, &_config_start, len);
+    success = config_load(&parameter_root, &_config_start);
 
     if (success) {
         chprintf(chp, "OK.\r\n");
@@ -313,11 +313,10 @@ static void cmd_config_load(BaseSequentialStream *chp, int argc, char **argv)
 {
     (void) argc;
     (void) argv;
-    extern uint32_t _config_start, _config_end;
-    size_t len = (size_t)(&_config_end - &_config_start);
+    extern uint8_t _config_start;
     bool success;
 
-    success = config_load(&parameter_root, &_config_start, len);
+    success = config_load(&parameter_root, &_config_start);
 
     if (success) {
         chprintf(chp, "OK.\r\n");

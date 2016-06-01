@@ -25,10 +25,9 @@ parameter_namespace_t parameter_root, aseba_ns;
 
 static bool load_config(void)
 {
-    extern uint32_t _config_start, _config_end;
-    size_t len = (size_t)(&_config_end - &_config_start);
+    extern uint32_t _config_start;
 
-    return config_load(&parameter_root, &_config_start, len);
+    return config_load(&parameter_root, &_config_start);
 }
 
 int main(void)

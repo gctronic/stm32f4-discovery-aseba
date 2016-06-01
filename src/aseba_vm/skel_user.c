@@ -180,7 +180,7 @@ void AsebaNative_settings_save(AsebaVMState *vm)
     config_save(&_config_start, len, &parameter_root);
 
     // Second try to read it back, see if we failed
-    success = config_load(&parameter_root, &_config_start, len);
+    success = config_load(&parameter_root, &_config_start);
 
     if (!success) {
         AsebaVMEmitNodeSpecificError(vm, "Config save failed!");

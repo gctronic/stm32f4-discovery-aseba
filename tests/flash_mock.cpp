@@ -18,6 +18,9 @@ void flash_unlock(void)
 void flash_sector_erase(void *p)
 {
     mock("flash").actualCall("erase").withParameter("sector", p);
+
+    /* At least invalid any checksum in that block. */
+    memset(p, 0, 1);
 }
 
 void flash_write(void *addr, const void *data, size_t len)
