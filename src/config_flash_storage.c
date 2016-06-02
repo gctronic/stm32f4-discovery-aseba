@@ -1,5 +1,6 @@
 #include <string.h>
 #include "config_flash_storage.h"
+#include "config_flash_storage_private.h"
 #include "flash/flash.h"
 #include "parameter/parameter_msgpack.h"
 #include "cmp/cmp.h"

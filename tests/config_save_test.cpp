@@ -1,6 +1,7 @@
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 #include "config_flash_storage.h"
+#include "config_flash_storage_private.h"
 #include "parameter/parameter_msgpack.h"
 #include <cstdio>
 #include <cstring>
