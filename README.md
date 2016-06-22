@@ -1,6 +1,6 @@
-Epuck Firmware
+Aseba discovery firmware
 ==============
-Firmware for the Epuck 2
+Firmware to run Aseba on an STM32F4 discovery board
 
 ## Requirements
 
