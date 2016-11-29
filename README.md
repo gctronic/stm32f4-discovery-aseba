@@ -7,6 +7,7 @@ Firmware to run Aseba on an STM32F4 discovery board
 This project requires the following tools:
 
 * A recent version of GCC/G++ for ARM (Tested with 4.9+)
+* OpenOCD 0.9 or later
 * A C / C++ compiler for the host (only required for unit tests)
 * [Packager](packager), which is a tool to generate makefiles with dependencies.
     Once you installed Python 3, it can be installed by running `pip3 install cvra-packager`.
@@ -23,6 +24,8 @@ packager
 make
 make flash
 ```
+
+If you get messages like `Fatal error: can't create build/obj/chcoreasm_v7m.o: No such file or directory`, run `make -B` instead of simply `make`.
 
 To start the shell, open a terminal emulator and run
 
