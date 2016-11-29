@@ -26,18 +26,18 @@ static sint16 vmStack[VM_STACK_SIZE];
 static parameter_t nodeId_param;
 
 AsebaVMState vmState = {
-    .nodeId=0, /* changed by aseba_vm_init() */
+    .nodeId = 0, /* changed by aseba_vm_init() */
 
-    .bytecodeSize=VM_BYTECODE_SIZE,
-    .bytecode=vmBytecode,
+    .bytecodeSize = VM_BYTECODE_SIZE,
+    .bytecode = vmBytecode,
 
-    .variablesSize=sizeof(vmVariables) / sizeof(sint16),
-    .variables=(sint16*)&vmVariables,
+    .variablesSize = sizeof(vmVariables) / sizeof(sint16),
+    .variables = (sint16*)&vmVariables,
 
-    .stackSize=VM_STACK_SIZE,
-    .stack=vmStack,
-    .flags=0, .pc=0, .sp=0,
-    .breakpoints={0}, .breakpointsCount=0,
+    .stackSize = VM_STACK_SIZE,
+    .stack = vmStack,
+    .flags = 0, .pc = 0, .sp = 0,
+    .breakpoints = {0}, .breakpointsCount = 0,
 };
 
 
@@ -76,7 +76,7 @@ static THD_FUNCTION(aseba_vm_thd, arg)
         int event = ffs(events_flags) - 1;
 
         // If a local event is pending, then execute it.
-        if (event != - 1) {
+        if (event != -1) {
 
             CLEAR_EVENT(event);
 
@@ -189,4 +189,3 @@ void AsebaWriteBytecode(AsebaVMState *vm)
     flash_write(&_aseba_bytecode_start + sizeof(uint16), vm->bytecode, vm->bytecodeSize);
     flash_lock();
 }
-

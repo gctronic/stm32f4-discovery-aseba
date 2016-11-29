@@ -63,10 +63,10 @@ static void aseba_bridge_can_to_uart(void *p)
 
     while (true) {
         length.u16 = AsebaCanRecv(data,
-                ASEBA_MAX_INNER_PACKET_SIZE,
-                &source.u16);
+                                  ASEBA_MAX_INNER_PACKET_SIZE,
+                                  &source.u16);
 
-		if (length.u16 > 0) {
+        if (length.u16 > 0) {
             palTogglePad(GPIOD, GPIOD_LED4);
             /* Aseba transmits length minus the type. */
             length.u16 -= 2;
@@ -74,7 +74,7 @@ static void aseba_bridge_can_to_uart(void *p)
             chSequentialStreamWrite(stream, length.u8, sizeof(source));
             chSequentialStreamWrite(stream, source.u8, sizeof(source));
             chSequentialStreamWrite(stream, data, length.u16 + 2);
-		}
+        }
         chThdSleepMilliseconds(1);
     }
 }

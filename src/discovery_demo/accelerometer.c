@@ -5,7 +5,7 @@
 
 #include "discovery_demo/accelerometer.h"
 
-accelerometer_sample_t  acc_sample;
+accelerometer_sample_t acc_sample;
 accelerometer_callback acc_callback;
 
 

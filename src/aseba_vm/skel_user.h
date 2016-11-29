@@ -19,10 +19,9 @@ extern "C" {
 #define SETTINGS_COUNT 32
 
 /** Enum containing all the possible events. */
-enum AsebaLocalEvents
-{
-	EVENT_ACC = 0, // New accelerometer measurement
-	EVENT_BUTTON, // Button click
+enum AsebaLocalEvents {
+    EVENT_ACC=0,   // New accelerometer measurement
+    EVENT_BUTTON, // Button click
 };
 
 
@@ -31,18 +30,18 @@ enum AsebaLocalEvents
  * @note This should be kept in sync with the variable descriptions.
  */
 struct _vmVariables {
-	sint16 id; 							// NodeID
-	sint16 source; 						// Source
-	sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
-	sint16 fwversion[2];				// Firmware version
-	sint16 productId;					// Product ID
+    sint16 id;                          // NodeID
+    sint16 source;                      // Source
+    sint16 args[VM_VARIABLES_ARG_SIZE]; // Args
+    sint16 fwversion[2];                // Firmware version
+    sint16 productId;                   // Product ID
 
-	// Variables
-	uint16 leds[6];
-	sint16 acc[3];
+    // Variables
+    uint16 leds[6];
+    sint16 acc[3];
 
-	// Free space
-	sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
+    // Free space
+    sint16 freeSpace[VM_VARIABLES_FREE_SPACE];
 };
 
 /** Declares the parameters and variables required by the Aseba application. */

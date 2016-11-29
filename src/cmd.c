@@ -45,9 +45,9 @@ static void cmd_threads(BaseSequentialStream *chp, int argc, char *argv[])
     tp = chRegFirstThread();
     do {
         chprintf(chp, "%08lx %08lx %4lu %4lu %9s\r\n",
-                         (uint32_t)tp, (uint32_t)tp->p_ctx.r13,
-                         (uint32_t)tp->p_prio, (uint32_t)(tp->p_refs - 1),
-                         states[tp->p_state]);
+                 (uint32_t)tp, (uint32_t)tp->p_ctx.r13,
+                 (uint32_t)tp->p_prio, (uint32_t)(tp->p_refs - 1),
+                 states[tp->p_state]);
         tp = chRegNextThread(tp);
     } while (tp != NULL);
 }
@@ -62,7 +62,7 @@ static void cmd_test(BaseSequentialStream *chp, int argc, char *argv[])
         return;
     }
     tp = chThdCreateFromHeap(NULL, TEST_WA_SIZE, chThdGetPriorityX(),
-                                                     TestThread, chp);
+                             TestThread, chp);
     if (tp == NULL) {
         chprintf(chp, "out of memory\r\n");
         return;
@@ -75,7 +75,7 @@ static void cmd_readclock(BaseSequentialStream *chp, int argc, char *argv[])
     (void)argc;
     (void)argv;
     chprintf(chp, "SYSCLK: %i \n HCLK: %i \n PCLK1  %i \n PCLK2 %i \n",
-        STM32_SYSCLK, STM32_HCLK, STM32_PCLK1, STM32_PCLK2);
+             STM32_SYSCLK, STM32_HCLK, STM32_PCLK1, STM32_PCLK2);
 }
 
 
@@ -88,18 +88,19 @@ static void cmd_sqrt(BaseSequentialStream *chp, int argc, char *argv[])
     time_measurement_t tmp;
     chTMObjectInit(&tmp);
 
-    if(argc != 2) {
-        chprintf(chp, "Usage: sqrt mode int\r\nModes: a (aseba), b (math), c (assembler) is default mode\r\n");
+    if (argc != 2) {
+        chprintf(chp,
+                 "Usage: sqrt mode int\r\nModes: a (aseba), b (math), c (assembler) is default mode\r\n");
     } else {
-        input =(uint16_t) atoi(argv[1]);
+        input = (uint16_t) atoi(argv[1]);
 
-        if(!strcmp(argv[0], "a")) {
+        if (!strcmp(argv[0], "a")) {
             chSysLock();
             chTMStartMeasurementX(&tmp);
             result = aseba_sqrt(input);
             chTMStopMeasurementX(&tmp);
             chSysUnlock();
-        } else if(!strcmp(argv[0], "b")) {
+        } else if (!strcmp(argv[0], "b")) {
             chSysLock();
             chTMStartMeasurementX(&tmp);
             result = sqrtf(input);
@@ -109,11 +110,11 @@ static void cmd_sqrt(BaseSequentialStream *chp, int argc, char *argv[])
             chSysLock();
             chTMStartMeasurementX(&tmp);
             x = (float) input;
-            __asm__ volatile(
+            __asm__ volatile (
                 "vsqrt.f32 %[var], %[var]"
-                : [var]"+t"(x)
-            );
-            result =(uint16_t) x;
+                : [var] "+t" (x)
+                );
+            result = (uint16_t) x;
             chTMStopMeasurementX(&tmp);
             chSysUnlock();
         }
@@ -131,13 +132,13 @@ static void cmd_atan2(BaseSequentialStream *chp, int argc, char *argv[])
     time_measurement_t tmp;
     chTMObjectInit(&tmp);
 
-    if(argc != 3) {
+    if (argc != 3) {
         chprintf(chp, "Usage: atan2 mode a b\r\nModes: a (aseba), b (math) is default mode\r\n");
     } else {
-        a =(int16_t) atoi(argv[1]);
-        b =(int16_t) atoi(argv[2]);
+        a = (int16_t) atoi(argv[1]);
+        b = (int16_t) atoi(argv[2]);
 
-        if(!strcmp(argv[0], "a")) {
+        if (!strcmp(argv[0], "a")) {
             chSysLock();
             chTMStartMeasurementX(&tmp);
             result = aseba_atan2(a, b);
@@ -146,7 +147,7 @@ static void cmd_atan2(BaseSequentialStream *chp, int argc, char *argv[])
         } else {
             chSysLock();
             chTMStartMeasurementX(&tmp);
-            result =(int16_t)(atan2f(a, b) * 32768 / M_PI);
+            result = (int16_t)(atan2f(a, b) * 32768 / M_PI);
             chTMStopMeasurementX(&tmp);
             chSysUnlock();
         }
@@ -173,7 +174,7 @@ static void show_config_tree(BaseSequentialStream *out, parameter_namespace_t *n
     tree_indent(out, indent);
     chprintf(out, "%s:\r\n", ns->id);
 
-    for (p=ns->parameter_list; p!=NULL; p=p->next) {
+    for (p = ns->parameter_list; p != NULL; p = p->next) {
         tree_indent(out, indent + 1);
         if (parameter_defined(p)) {
             switch (p->type) {
@@ -186,7 +187,7 @@ static void show_config_tree(BaseSequentialStream *out, parameter_namespace_t *n
                     break;
 
                 case _PARAM_TYPE_BOOLEAN:
-                    chprintf(out, "%s: %s\r\n", p->id, parameter_boolean_get(p)?"true":"false");
+                    chprintf(out, "%s: %s\r\n", p->id, parameter_boolean_get(p) ? "true" : "false");
                     break;
 
                 case _PARAM_TYPE_STRING:
@@ -364,7 +365,7 @@ static THD_FUNCTION(shell_spawn_thd, p)
                 shelltp = NULL;
             }
         }
-    chThdSleepMilliseconds(500);
+        chThdSleepMilliseconds(500);
     }
 }
 

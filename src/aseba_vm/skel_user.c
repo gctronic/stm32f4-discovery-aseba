@@ -23,27 +23,27 @@ struct _vmVariables vmVariables;
 
 
 const AsebaVMDescription vmDescription = {
-	BOARD_NAME,
-	{
-		// {Number of element in array, Name displayed in aseba studio}
-		{1, "_id"},
-		{1, "event.source"},
-		{VM_VARIABLES_ARG_SIZE, "event.args"},
-        {2, "_fwversion"},
-		{1, "_productId"},
+    BOARD_NAME,
+    {
+     // {Number of element in array, Name displayed in aseba studio}
+     {1, "_id"},
+     {1, "event.source"},
+     {VM_VARIABLES_ARG_SIZE, "event.args"},
+     {2, "_fwversion"},
+     {1, "_productId"},
 
-        {6, "leds"},
-        {3, "acc"},
+     {6, "leds"},
+     {3, "acc"},
 
-		{0, NULL}
-	}
+     {0, NULL}
+}
 };
 
 // Event descriptions
 const AsebaLocalEventDescription localEvents[] = {
     {"new_acc", "New accelerometer measurement"},
     {"button", "User button clicked"},
-	{NULL, NULL}
+    {NULL, NULL}
 };
 
 void aseba_variables_init(parameter_namespace_t *aseba_ns)
@@ -105,8 +105,8 @@ static AsebaNativeFunctionDescription AsebaNativeDescription__system_reboot =
     "_system.reboot",
     "Reboot the microcontroller",
     {
-        {0,0}
-    }
+     {0, 0}
+}
 };
 
 void AsebaNative__system_reboot(AsebaVMState *vm)
@@ -117,20 +117,21 @@ void AsebaNative__system_reboot(AsebaVMState *vm)
 
 static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_read =
 {
-	"_system.settings.read",
-	"Read a setting",
-	{
-		{ 1, "address"},
-		{ 1, "value"},
-		{ 0, 0 }
-	}
+    "_system.settings.read",
+    "Read a setting",
+    {
+     { 1, "address"},
+     { 1, "value"},
+     { 0, 0 }
+}
 };
 
-static void AsebaNative__system_settings_read(AsebaVMState *vm) {
-	uint16 address = vm->variables[AsebaNativePopArg(vm)];
-	uint16 destidx = AsebaNativePopArg(vm);
+static void AsebaNative__system_settings_read(AsebaVMState *vm)
+{
+    uint16 address = vm->variables[AsebaNativePopArg(vm)];
+    uint16 destidx = AsebaNativePopArg(vm);
     if (address < SETTINGS_COUNT) {
-	    vm->variables[destidx] = parameter_integer_get(&aseba_settings[address]);
+        vm->variables[destidx] = parameter_integer_get(&aseba_settings[address]);
     } else {
         AsebaVMEmitNodeSpecificError(vm, "Invalid settings address.");
     }
@@ -138,18 +139,19 @@ static void AsebaNative__system_settings_read(AsebaVMState *vm) {
 
 static AsebaNativeFunctionDescription AsebaNativeDescription__system_settings_write =
 {
-	"_system.settings.write",
-	"Write a setting",
-	{
-		{ 1, "address"},
-		{ 1, "value"},
-		{ 0, 0 }
-	}
+    "_system.settings.write",
+    "Write a setting",
+    {
+     { 1, "address"},
+     { 1, "value"},
+     { 0, 0 }
+}
 };
 
-static void AsebaNative__system_settings_write(AsebaVMState *vm) {
-	uint16 address = vm->variables[AsebaNativePopArg(vm)];
-	uint16 value = vm->variables[AsebaNativePopArg(vm)];
+static void AsebaNative__system_settings_write(AsebaVMState *vm)
+{
+    uint16 address = vm->variables[AsebaNativePopArg(vm)];
+    uint16 value = vm->variables[AsebaNativePopArg(vm)];
 
     if (address < SETTINGS_COUNT) {
         parameter_integer_set(&aseba_settings[address], value);
@@ -166,8 +168,8 @@ static AsebaNativeFunctionDescription AsebaNativeDescription_settings_save =
     "_system.settings.flash",
     "Save settings into flash",
     {
-        {0,0}
-    }
+     {0, 0}
+}
 };
 
 void AsebaNative_settings_save(AsebaVMState *vm)
@@ -192,8 +194,8 @@ static AsebaNativeFunctionDescription AsebaNativeDescription_settings_erase =
     "_system.settings.erase",
     "Restore settings to default value (erases flash)",
     {
-        {0,0}
-    }
+     {0, 0}
+}
 };
 
 
@@ -210,8 +212,8 @@ AsebaNativeFunctionDescription AsebaNativeDescription_clear_all_leds = {
     "leds.clear_all",
     "Clear all the LEDs",
     {
-        {0, 0}
-    }
+     {0, 0}
+}
 };
 
 
@@ -220,7 +222,7 @@ void clear_all_leds(AsebaVMState *vm)
     ASEBA_UNUSED(vm);
     int i;
 
-    for(i = 3; i <= 6; i++) {
+    for (i = 3; i <= 6; i++) {
         demo_led_set(i, 0);
         vmVariables.leds[i - 1] = 0;
     }
@@ -230,11 +232,11 @@ void clear_all_leds(AsebaVMState *vm)
 
 // Native function descriptions
 const AsebaNativeFunctionDescription* nativeFunctionsDescription[] = {
-	&AsebaNativeDescription__system_reboot,
+    &AsebaNativeDescription__system_reboot,
     &AsebaNativeDescription__system_settings_read,
     &AsebaNativeDescription__system_settings_write,
-	&AsebaNativeDescription_settings_save,
-	&AsebaNativeDescription_settings_erase,
+    &AsebaNativeDescription_settings_save,
+    &AsebaNativeDescription_settings_erase,
     &AsebaNativeDescription_clear_all_leds,
     ASEBA_NATIVES_STD_DESCRIPTIONS,
     0
@@ -248,8 +250,7 @@ AsebaNativeFunctionPointer nativeFunctions[] = {
     AsebaNative_settings_save,
     AsebaNative_settings_erase,
     clear_all_leds,
-	ASEBA_NATIVES_STD_FUNCTIONS,
+    ASEBA_NATIVES_STD_FUNCTIONS,
 };
 
 const int nativeFunctions_length = sizeof(nativeFunctions) / sizeof(nativeFunctions[0]);
-

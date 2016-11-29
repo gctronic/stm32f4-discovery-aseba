@@ -12,7 +12,7 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-*/
+ */
 
 /**
  * @file    templates/halconf.h
@@ -52,8 +52,8 @@
 #endif
 
 /**
-+ * @brief   Enables the DAC subsystem.
-+ */
+ + * @brief   Enables the DAC subsystem.
+ + */
 #if !defined(HAL_USE_DAC) || defined(__DOXYGEN__)
 #define HAL_USE_DAC                 FALSE
 #endif

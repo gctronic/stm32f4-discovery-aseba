@@ -13,11 +13,11 @@ void demo_led_init(void)
         128,                                      /* PWM period is 128 cycles.    */
         NULL,
         {
-            {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-            {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-            {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-            {PWM_OUTPUT_ACTIVE_HIGH, NULL}
-        },
+         {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+         {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+         {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+         {PWM_OUTPUT_ACTIVE_HIGH, NULL}
+},
         /* HW dependent part.*/
         0,
         0
@@ -35,16 +35,19 @@ void demo_led_init(void)
 
 void demo_led_set(int led, int brightness)
 {
-    switch(led) {
+    switch (led) {
         case 3:
             pwmEnableChannel(&PWMD4, 1, (pwmcnt_t) brightness);
             break;
+
         case 4:
             pwmEnableChannel(&PWMD4, 0, (pwmcnt_t) brightness);
             break;
+
         case 5:
             pwmEnableChannel(&PWMD4, 2, (pwmcnt_t) brightness);
             break;
+
         case 6:
             pwmEnableChannel(&PWMD4, 3, (pwmcnt_t) brightness);
             break;
