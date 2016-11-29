@@ -9,6 +9,7 @@ debug/
 tags*
 .tags*
 *.o
+*.a
 *.d
 *.bin
 *.elf

@@ -248,5 +248,13 @@ ULIBS =
 RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk
 
+# Empty libraries, required by stack smashing protection
+PRE_MAKE_ALL_RULE_HOOK: libssp.a libssp_nonshared.a
+libssp.a:
+	arm-none-eabi-ar rcs $@
+
+libssp_nonshared.a:
+	arm-none-eabi-ar rcs $@
+
 flash: build/$(PROJECT).elf
 	openocd -f oocd.cfg -c "program build/$(PROJECT).elf verify reset exit"
