@@ -326,6 +326,39 @@ static void cmd_config_load(BaseSequentialStream *chp, int argc, char **argv)
     }
 }
 
+static void gpt6_cb(GPTDriver *timer)
+{
+    (void) timer;
+    palTogglePad(GPIOA, GPIOA_PIN1);
+}
+
+static void cmd_dac(BaseSequentialStream *chp, int argc, char **argv)
+{
+    (void) argc;
+    (void) argv;
+
+    chprintf(chp, "Starting general purpose timer.\r\n");
+    chprintf(chp, "PA1 will now toggle at ~48 Khz\r\n");
+
+    /* Sets the pin as output. */
+    palSetPadMode(GPIOA, GPIOA_PIN1,
+                  PAL_MODE_OUTPUT_PUSHPULL
+                  | PAL_STM32_OTYPE_PUSHPULL
+                  | PAL_STM32_OSPEED_HIGHEST
+                  );
+
+    static const GPTConfig gpt6cfg1 = {
+        .frequency = 1000000U,
+        .callback = gpt6_cb,
+        .cr2 = 0, /* TODO: implement correct trigger out (TRGO) event. */
+        .dier = 0U
+    };
+
+    /* 21 us -> 48 Khz sample rate. */
+    gptStartContinuous(&GPTD6, 21U);
+    gptStart(&GPTD6, &gpt6cfg1);
+}
+
 
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
@@ -339,6 +372,7 @@ const ShellCommand shell_commands[] = {
     {"config_save", cmd_config_save},
     {"config_load", cmd_config_load},
     {"config_erase", cmd_config_erase},
+    {"dac", cmd_dac},
     {NULL, NULL}
 };
 
