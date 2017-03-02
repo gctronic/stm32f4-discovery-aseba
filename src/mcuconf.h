@@ -42,15 +42,15 @@
 #define STM32_HSE_ENABLED                   TRUE
 #define STM32_LSE_ENABLED                   FALSE
 #define STM32_CLOCK48_REQUIRED              TRUE
-#define STM32_SW                            STM32_SW_PLL
-#define STM32_PLLSRC                        STM32_PLLSRC_HSE
-#define STM32_PLLM_VALUE                    8       // (define STM32_SYSCLK)
-#define STM32_PLLN_VALUE                    336
-#define STM32_PLLP_VALUE                    2
-#define STM32_PLLQ_VALUE                    7
-#define STM32_HPRE                          STM32_HPRE_DIV1     // (define STM32_HCLK)
-#define STM32_PPRE1                         STM32_PPRE1_DIV4    // (define STM32_PCLK1)
-#define STM32_PPRE2                         STM32_PPRE2_DIV2    // (define STM32_PCLK2)
+#define STM32_SW                            STM32_SW_PLL // SYSCLK source is PLL.
+#define STM32_PLLSRC                        STM32_PLLSRC_HSE // 8 MHz.
+#define STM32_PLLM_VALUE                    8 // VCO input freq = 8/PLLM = 1 MHz // (define STM32_SYSCLK)
+#define STM32_PLLN_VALUE                    336 // VCO output freq = VCO input * PLLN = 336 MHz
+#define STM32_PLLP_VALUE                    2 // Main PLL clock = VCO output / PLLP = 336/2 = 168 MHz
+#define STM32_PLLQ_VALUE                    7 // USB, SDIO clock = VCO outpu / PLLQ = 48 MHz
+#define STM32_HPRE                          STM32_HPRE_DIV1     // AHB prescaler => 168 MHz. (define STM32_HCLK)
+#define STM32_PPRE1                         STM32_PPRE1_DIV4    // APB1 prescaler => 168/4 = 42 MHz. (define STM32_PCLK1)
+#define STM32_PPRE2                         STM32_PPRE2_DIV2    // APB2 prescaler => 168/2 = 84 MHz. (define STM32_PCLK2)
 #define STM32_RTCSEL                        STM32_RTCSEL_LSI
 #define STM32_RTCPRE_VALUE                  8
 #define STM32_MCO1SEL                       STM32_MCO1SEL_HSI
