@@ -1,15 +1,15 @@
 #include "po8030.h"
-
 #include "ch.h"
-#include "hal.h"
 #include "usbcfg.h"
 #include "chprintf.h"
 
-#define PO8030_ADDR 0x6E
-
 i2cflags_t errors = 0;
 
-int32_t read_reg(uint8_t addr, uint8_t reg, uint8_t *value) {
+i2cflags_t get_last_i2c_error(void) {
+    return errors;
+}
+
+int8_t read_reg(uint8_t addr, uint8_t reg, uint8_t *value) {
 	systime_t timeout = MS2ST(4); // 4 ms
 	uint8_t txbuf[1] = {reg};
 	uint8_t rxbuf[1];
@@ -20,16 +20,16 @@ int32_t read_reg(uint8_t addr, uint8_t reg, uint8_t *value) {
 
 	if (status != MSG_OK){
         errors = i2cGetErrors(&I2CD1);
-		return -1;
+		return status;
 	}
 
 	*value = rxbuf[0];
 
-	return 0;
+    return MSG_OK;
 }
 
 
-int32_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
+int8_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
 	systime_t timeout = MS2ST(4); // 4 ms
 	uint8_t txbuf[2] = {reg, value};
 	uint8_t rxbuf[1];
@@ -40,187 +40,393 @@ int32_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
 
 	if (status != MSG_OK){
         errors = i2cGetErrors(&I2CD1);
-		return -1;
+		return status;
 	}
 
-	return 0;
+    return MSG_OK;
 }
 
 void po8030_init(void) {
+    // Generate the master clock for the camera.
+    palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(0)); // MCO1 output from HSI (16 MHz) => see "mcuconf.h".
 
+    // Configure I2C communication.
+    palSetPadMode(GPIOB, 8, PAL_MODE_ALTERNATE(4)); // I2C1 SCL.
+    //palSetPadMode(GPIOB, 9, PAL_MODE_ALTERNATE(4)); // I2C1 SDA. Already setup in the board file (ChibiOS/os/hal/boards/ST_STM32F4_DISCOVERY/board.h).
+    static const I2CConfig i2cfg1 = {
+        OPMODE_I2C,
+        400000,
+        FAST_DUTY_CYCLE_2,
+    };
+    i2cStart(&I2CD1, &i2cfg1);
+
+    // Keep reset pin low for at least 8 x MCLK cycles...100 ms is more than enough.
+    palSetPadMode(GPIOC, 10, PAL_MODE_OUTPUT_PUSHPULL); // PO8030 RST pin.
+    palWritePad(GPIOC, 10, PAL_HIGH);
+    chThdSleepMilliseconds(10);
+    palWritePad(GPIOC, 10, PAL_LOW);
+    chThdSleepMilliseconds(100);
+    palWritePad(GPIOC, 10, PAL_HIGH);
+
+}
+
+int8_t po8030_read_id(uint16_t *id) {
     uint8_t regValue[2] = {0};
+    int8_t err = 0;
 
-    if(read_reg(0x4A, 0x01, &regValue[0]) < 0) { // DAC reg id.
-//        chprintf((BaseSequentialStream *)&SDU1, "tx error = %d\r\n", errors);
+    if((err = read_reg(PO8030_ADDR, REG_DEVICE_ID_H, &regValue[0])) != MSG_OK) {
+        return err;
+    }
+    if((err = read_reg(PO8030_ADDR, REG_DEVICE_ID_L, &regValue[1])) != MSG_OK) {
+        return err;
+    }
+    *id = regValue[0]|regValue[1];
+
+    return MSG_OK;
+}
+
+int8_t po8030_set_bank(uint8_t bank) {
+    return write_reg(PO8030_ADDR, REG_BANK, bank);
+}
+
+int8_t po8030_set_format(format_t fmt) {
+    int8_t err = 0;
+
+    if((err = po8030_set_bank(BANK_B)) != MSG_OK) {
+        return err;
+    }
+
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_FORMAT, fmt)) != MSG_OK) {
+        return err;
+    }
+
+    if(fmt == FORMAT_YYYY) {
+        if((err = write_reg(PO8030_ADDR, PO8030_REG_SYNC_CONTROL0, 0x01)) != MSG_OK) {
+            return err;
+        }
+        if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
+            return err;
+        }
+        if((err = write_reg(PO8030_ADDR, PO8030_REG_VSYNCSTARTROW_L, 0x03)) != MSG_OK) {
+            return err;
+        }
     } else {
-//        chprintf((BaseSequentialStream *)&SDU1, "DAC ID = %X\r\n", regValue[0]);
+        if((err = write_reg(PO8030_ADDR, PO8030_REG_SYNC_CONTROL0, 0x00)) != MSG_OK) {
+            return err;
+        }
+        if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
+            return err;
+        }
+        if((err = write_reg(PO8030_ADDR, PO8030_REG_VSYNCSTARTROW_L, 0x0A)) != MSG_OK) {
+            return err;
+        }
     }
 
-    if(write_reg(PO8030_ADDR, REG_BANK, BANK_A) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_BANK error = %d\r\n", errors);
+    return MSG_OK;
+}
+
+int8_t po8030_set_vga(void) {
+    // To be implemented...
+    return MSG_OK;
+}
+
+int8_t po8030_set_qvga(void) {
+    int8_t err = 0;
+
+    if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_PAD_CONTROL error = %d\r\n", errors);
+    // Window settings.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_L, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_L, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_H, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_L, 0x40)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_L, 0xF0)) != MSG_OK) {
+        return err;
+    }
+    // AE full window selection.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_L, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_H, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_L, 0x40)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_L, 0x01)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_L, 0xF0)) != MSG_OK) {
+        return err;
+    }
+    // AE center window selection.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_L, 0x6B)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_L, 0xD6)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_L, 0x50)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_H, 0x00)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_L, 0xA0)) != MSG_OK) {
+        return err;
     }
 
-    if(read_reg(PO8030_ADDR, REG_DEVICE_ID_H, &regValue[0]) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "tx error = %d\r\n", errors);
+    if((err = po8030_set_bank(BANK_B)) != MSG_OK) {
+        return err;
     }
-    if(read_reg(PO8030_ADDR, REG_DEVICE_ID_L, &regValue[1]) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "tx error = %d\r\n", errors);
+    // Scale settings.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_X, 0x40)) != MSG_OK) {
+        return err;
     }
-//    chprintf((BaseSequentialStream *)&SDU1, "CAM ID = %X %X\r\n", regValue[0], regValue[1]);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_Y, 0x40)) != MSG_OK) {
+        return err;
+    }
 
-    // RGB565 format setup.
-//    chprintf((BaseSequentialStream *)&SDU1, "Setting color format...\r\n");
-    if(write_reg(PO8030_ADDR, REG_BANK, BANK_B) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_BANK error = %d\r\n", errors);
-    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x00) < 0) { // cbycry
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x01) < 0) { // crycby
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x02) < 0) { // ycbycr
-        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x03) < 0) { // ycrycb
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x30) < 0) { // rgb565
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x31) < 0) { // rgb565 (byte swap)
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x32) < 0) { // bgr565
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_FORMAT, 0x44) < 0) { // yyyy
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_FORMAT error = %d\r\n", errors);
-//    }
-//    if(write_reg(PO8030_ADDR, PO8030_REG_SYNC_CONTROL0, 0x02) < 0) {
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_SYNC_CONTROL0 error = %d\r\n", errors);
-//    }
+    return MSG_OK;
+}
 
+int8_t po8030_set_qqvga(void) {
+    int8_t err = 0;
 
-    // QQVGA output image size setup.
-//    chprintf((BaseSequentialStream *)&SDU1, "Setting QQVGA...\r\n");
-    if(write_reg(PO8030_ADDR, REG_BANK, BANK_A) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_BANK error = %d\r\n", errors);
+    if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWX1_H error = %d\r\n", errors);
+    // Window settings.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_L, 0x01) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWX1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX1_L, 0x01)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWY1_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_L, 0x01) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWY1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY1_L, 0x01)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWX2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_L, 0xA0) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWX2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWX2_L, 0xA0)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWY2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_L, 0x78) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_WINDOWY2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_WINDOWY2_L, 0x78)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWX1_H error = %d\r\n", errors);
+    // AE full window selection.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_L, 0x01) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWX1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX1_L, 0x01)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWX2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_L, 0xA0) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWX2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWX2_L, 0xA0)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWY1_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_L, 0x01) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWY1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY1_L, 0x01)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWY2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_L, 0x78) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_FWY2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_FWY2_L, 0x78)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWX1_H error = %d\r\n", errors);
+    // AE center window selection.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_L, 0x36) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWX1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX1_L, 0x36)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWX2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_L, 0x6B) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWX2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWX2_L, 0x6B)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWY1_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_L, 0x29) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWY1_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY1_L, 0x29)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWY2_H error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_H, 0x00)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_L, 0x50) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_AUTO_CWY2_L error = %d\r\n", errors);
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_AUTO_CWY2_L, 0x50)) != MSG_OK) {
+        return err;
     }
-    if(write_reg(PO8030_ADDR, REG_BANK, BANK_B) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_BANK error = %d\r\n", errors);
-    }
-    if(write_reg(PO8030_ADDR, PO8030_REG_SCALE_X, 0x80) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_SCALE_X error = %d\r\n", errors);
-    }
-    if(write_reg(PO8030_ADDR, PO8030_REG_SCALE_Y, 0x80) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_SCALE_Y error = %d\r\n", errors);
-    }
-    if(write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_SCALE_TH_H error = %d\r\n", errors);
-    }
-    if(write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0xF5) < 0) {
-        chprintf((BaseSequentialStream *)&SDU1, "REG_SCALE_TH_L error = %d\r\n", errors);
-    }
-    //if(write_reg(PO8030_ADDR, PO8030_REG_SYNC_CONTROL0, 0x03) < 0) {
-    //    chprintf((BaseSequentialStream *)&SDU1, "REG_SYNC_CONTROL0 error = %d\r\n", errors);
-    //}
 
-//    // Turn on camera.
-////    chprintf((BaseSequentialStream *)&SDU1, "Turning on camera...\r\n");
-//    if(write_reg(PO8030_ADDR, REG_BANK, BANK_A) < 0) {
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_BANK error = %d\r\n", errors);
-//    }
-//    if(read_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, &regValue[0]) < 0) {
-//        chprintf((BaseSequentialStream *)&SDU1, "tx error = %d\r\n", errors);
-//    } else {
-////        chprintf((BaseSequentialStream *)&SDU1, "PAD_CONTROL = %X\r\n", regValue[0]);
-//    }
-//    regValue[0] &= 0x3F;
-//    if(write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, regValue[0]) < 0) {
-//        chprintf((BaseSequentialStream *)&SDU1, "REG_PAD_CONTROL error = %d\r\n", errors);
-//    }
-//    if(read_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, &regValue[0]) < 0) {
-//        chprintf((BaseSequentialStream *)&SDU1, "tx error = %d\r\n", errors);
-//    } else {
-////        chprintf((BaseSequentialStream *)&SDU1, "PAD_CONTROL = %X\r\n", regValue[0]);
-//    }
+    if((err = po8030_set_bank(BANK_B)) != MSG_OK) {
+        return err;
+    }
+    // Scale settings.
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_X, 0x80)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_Y, 0x80)) != MSG_OK) {
+        return err;
+    }
 
+    return MSG_OK;
+}
+
+int8_t po8030_set_size(image_size_t imgsize) {
+    if(imgsize == SIZE_VGA) {
+        return po8030_set_vga();
+    } else if(imgsize == SIZE_QVGA) {
+        return po8030_set_qvga();
+    } else if(imgsize == SIZE_QQVGA) {
+        return po8030_set_qqvga();
+    }
+}
+
+int8_t po8030_set_scale_buffer_size(format_t fmt, image_size_t imgsize) {
+    // Scale buffer size depends on both format and size
+    int8_t err = 0;
+
+    if((err = po8030_set_bank(BANK_B)) != MSG_OK) {
+        return err;
+    }
+
+    if(fmt == FORMAT_YYYY) {
+        switch(imgsize) {
+            case SIZE_VGA:
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0x08)) != MSG_OK) {
+                    return err;
+                }
+                break;
+
+            case SIZE_QVGA:
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0xA4)) != MSG_OK) {
+                    return err;
+                }
+                break;
+
+            case SIZE_QQVGA:
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0x7C)) != MSG_OK) {
+                    return err;
+                }
+                break;
+        }
+    } else {
+        switch(imgsize) {
+            case SIZE_VGA:
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0x0A)) != MSG_OK) {
+                    return err;
+                }
+                break;
+
+            case SIZE_QVGA: // To be tested...
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x01)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0x46)) != MSG_OK) {
+                    return err;
+                }
+                break;
+
+            case SIZE_QQVGA:
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_H, 0x00)) != MSG_OK) {
+                    return err;
+                }
+                if((err = write_reg(PO8030_ADDR, PO8030_REG_SCALE_TH_L, 0xF5)) != MSG_OK) {
+                    return err;
+                }
+                break;
+        }
+    }
+
+    return MSG_OK;
+}
+
+int8_t po8030_config(format_t fmt, image_size_t imgsize) {
+
+    int8_t err = 0;
+
+    if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
+        return err;
+    }
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, 0x00)) != MSG_OK) {
+        return err;
+    }
+
+    if((err = po8030_set_format(fmt)) != MSG_OK) {
+        return err;
+    }
+
+    if((err = po8030_set_size(imgsize)) != MSG_OK) {
+        return err;
+    }
+
+    if((err = po8030_set_scale_buffer_size(fmt, imgsize)) != MSG_OK) {
+        return err;
+    }
+
+    return MSG_OK;
 }
 
 

@@ -91,6 +91,15 @@
 #define STM32_CAN_CAN2_IRQ_PRIORITY         11
 
 /*
+ * DCMI driver system settings.
+ */
+#define STM32_DCMI_USE_DCMI                 TRUE
+#define STM32_DCMI_IRQ_PRIORITY             11
+#define STM32_DCMI_DMA_PRIORITY             2
+#define STM32_DCMI_DMA_IRQ_PRIORITY         12
+#define STM32_DCMI_DMA_STREAM               STM32_DMA_STREAM_ID(2, 1)
+
+/*
  * EXT driver system settings.
  */
 #define STM32_EXT_EXTI0_IRQ_PRIORITY        6

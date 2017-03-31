@@ -1,12 +1,18 @@
 #ifndef PO8030_H
 #define PO8030_H
 
-
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "hal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define PO8030_ADDR 0x6E
+
+// Shared registers
 #define REG_DEVICE_ID_H 0x00
 #define REG_DEVICE_ID_L 0x01
 #define REG_BANK 0x3
@@ -71,7 +77,42 @@ extern "C" {
 #define PO8030_REG_EXPOSURE_L 0x15
 #define PO8030_REG_SATURATION 0x2C
 
+typedef enum {
+    FORMAT_CBYCRY = 0x00,
+    FORMAT_CRYCBY = 0x01,
+    FORMAT_YCBYCR = 0x02,
+    FORMAT_YCRYCB = 0x03,
+    FORMAT_RGGB = 0x10,
+    FORMAT_GBRG = 0x11,
+    FORMAT_GRBG = 0x12,
+    FORMAT_BGGR = 0x13,
+    FORMAT_RGB565 = 0x30,
+    FORMAT_RGB565_BYTE_SWAP = 0x31,
+    FORMAT_BGR565 = 0x32,
+    FORMAT_BGR565_BYTE_SWAP = 0x33,
+    FORMAT_RGB444 = 0x36,
+    FORMAT_RGB444_BYTE_SWAP = 0x37,
+    FORMAT_DPC_BAYER = 0x41,
+    FORMAT_YYYY = 0x44
+} format_t;
+
+typedef enum {
+    SIZE_VGA = 0x00,
+    SIZE_QVGA = 0x01,
+    SIZE_QQVGA = 0x02
+} image_size_t;
+
 void po8030_init(void);
+int8_t po8030_read_id(uint16_t *id);
+int8_t po8030_set_bank(uint8_t bank);
+int8_t po8030_set_format(format_t fmt);
+int8_t po8030_set_size(image_size_t imgsize);
+int8_t po8030_set_vga(void);
+int8_t po8030_set_qvga(void);
+int8_t po8030_set_qqvga(void);
+int8_t po8030_set_scale_buffer_size(format_t fmt, image_size_t imgsize);
+int8_t po8030_config(format_t fmt, image_size_t imgsize);
+i2cflags_t get_last_i2c_error(void);
 
 #ifdef __cplusplus
 }
