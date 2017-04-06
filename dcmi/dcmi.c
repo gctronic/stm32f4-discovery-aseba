@@ -96,7 +96,7 @@ void dcmiObjectInit(DCMIDriver *dcmip) {
  * @api
  */
 void dcmiPrepare(DCMIDriver *dcmip, const DCMIConfig *config, uint32_t transactionSize, void* rxbuf0, void* rxbuf1) {
-	osalDbgCheck((dcmip != NULL) && (config != NULL) && (transactionSize < (65536*4)) && (rxbuf0 != NULL));
+	osalDbgCheck((dcmip != NULL) && (config != NULL) && (transactionSize < (65536*4)) && ((transactionSize%4)==0) && (rxbuf0 != NULL));
 	osalSysLock();
 	osalDbgAssert((dcmip->state == DCMI_STOP), "invalid state");
 	dcmip->config = config;

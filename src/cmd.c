@@ -12,6 +12,7 @@
 #include "vm/natives.h"
 #include "main.h"
 #include "config_flash_storage.h"
+#include "camera/po8030.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
@@ -326,6 +327,312 @@ static void cmd_config_load(BaseSequentialStream *chp, int argc, char **argv)
     }
 }
 
+static void cmd_cam_set_brightness(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t value, err;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_brightness value.\r\nDefault=0, max=127, min=-128.\r\n");
+    } else {
+        value = (int8_t) atoi(argv[0]);
+        err = po8030_set_brightness(value);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot write register (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Register written correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_contrast(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t value, err;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_contrast value.\r\nDefault=64, max=255, min=0.\r\n");
+    } else {
+        value = (int8_t) atoi(argv[0]);
+        err = po8030_set_contrast(value);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot write register (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Register written correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_adv_conf_fmt(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint16_t f;
+    format_t fmt;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_adv_conf_fmt format\r\nformat: 0=color, 1=grey\r\n");
+    } else {
+        f = (uint8_t) atoi(argv[0]);
+
+        if(f==0) {
+            fmt = FORMAT_YCBYCR;
+            chprintf(chp, "Registered color format\r\n");
+        } else {
+            fmt = FORMAT_YYYY;
+            chprintf(chp, "Registered greyscale format\r\n");
+        }
+
+        po8030_save_current_format(fmt);
+    }
+}
+
+static void cmd_cam_set_adv_conf_sub(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint8_t sx, sy;
+    subsampling_t subx, suby;
+
+    if (argc != 2) {
+        chprintf(chp,
+                 "Usage: cam_adv_conf subsampling_x subsampling_y\r\nsubsampling: 1, 2, 4\r\n");
+    } else {
+        sx = (uint8_t) atoi(argv[0]);
+        sy = (uint8_t) atoi(argv[1]);
+
+        if(sx == 1) {
+            subx = SUBSAMPLING_X1;
+            chprintf(chp, "Registered x subsampling x1\r\n");
+        } else if(sx == 2) {
+            subx = SUBSAMPLING_X2;
+            chprintf(chp, "Registered x subsampling x2\r\n");
+        } else {
+            subx = SUBSAMPLING_X4;
+            chprintf(chp, "Registered x subsampling x4\r\n");
+        }
+
+        if(sy == 1) {
+            suby = SUBSAMPLING_X1;
+            chprintf(chp, "Registered y subsampling x1\r\n");
+        } else if(sy == 2) {
+            suby = SUBSAMPLING_X2;
+            chprintf(chp, "Registered y subsampling x2\r\n");
+        } else {
+            suby = SUBSAMPLING_X4;
+            chprintf(chp, "Registered y subsampling x4\r\n");
+        }
+
+        po8030_save_current_subsampling(subx, suby);
+    }
+}
+
+static void cmd_cam_set_adv_conf_win(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint16_t x1, y1, width, height;
+    subsampling_t subx, suby;
+    format_t fmt;
+
+    if (argc != 4) {
+        chprintf(chp,
+                 "Usage: cam_adv_conf x1 y1 width height\r\n");
+    } else {
+        x1 = (uint16_t) atoi(argv[0]);
+        y1 = (uint16_t) atoi(argv[1]);
+        width = (uint16_t) atoi(argv[2]);
+        height = (uint16_t) atoi(argv[3]);
+        fmt = po8030_get_saved_format();
+        subx = po8030_get_saved_subsampling_x();
+        suby = po8030_get_saved_subsampling_y();
+
+        err = po8030_advanced_config(fmt, x1, y1, width, height, subx, suby);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set configuration (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Configuration set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_mirror(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint8_t v, h;
+
+    if (argc != 2) {
+        chprintf(chp,
+                 "Usage: cam_mirror vertical_en horizontal_en\r\n1=enabled, 0=disabled\r\n");
+    } else {
+        v = (uint8_t) atoi(argv[0]);
+        h = (uint8_t) atoi(argv[1]);
+
+        err = po8030_set_mirror(v, h);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set mirroring (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Mirroring set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_gain(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint8_t r, g, b;
+
+    if (argc != 3) {
+        chprintf(chp,
+                 "Usage: cam_gain red_gain green_gain blue_gain\r\nThis command disable auto white balance.\r\nDefault: r=94, g=64, b=93\r\n");
+    } else {
+        r = (uint8_t) atoi(argv[0]);
+        g = (uint8_t) atoi(argv[1]);
+        b = (uint8_t) atoi(argv[2]);
+
+        err = po8030_set_rgb_gain(r, g, b);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set gain (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Gain set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_awb(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint8_t awb;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_awb awb_en.\r\n1=enabled, 0=disabled\r\n");
+    } else {
+        awb = (uint8_t) atoi(argv[0]);
+
+        err = po8030_set_awb(awb);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set white balance (%d)\r\n", err);
+        } else {
+            chprintf(chp, "White balance set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_ae(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint8_t ae;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_ae ae_en.\r\n1=enabled, 0=disabled\r\n");
+    } else {
+        ae = (uint8_t) atoi(argv[0]);
+
+        err = po8030_set_ae(ae);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set auto exposure (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Auto exposure set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_set_exposure(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    int8_t err;
+    uint16_t integral;
+    uint8_t fractional;
+
+    if (argc != 2) {
+        chprintf(chp,
+                 "Usage: cam_exposure integral fractional\r\nUnit is line time; total integration time = (integral + fractional/256) line time.\r\nDefault: integral=128, fractional=0\r\n");
+    } else {
+        integral = (uint16_t) atoi(argv[0]);
+        fractional = (uint8_t) atoi(argv[1]);
+
+        err = po8030_set_exposure(integral, fractional);
+        if(err != MSG_OK) {
+            chprintf(chp, "Cannot set exposure time (%d)\r\n", err);
+        } else {
+            chprintf(chp, "Exposure time set correctly\r\n");
+        }
+    }
+}
+
+static void cmd_cam_dcmi_prepare(BaseSequentialStream *chp, int argc, char **argv)
+{
+    uint32_t image_size = 0;
+
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: cam_dcmi_prepare capture_mode\r\ncapture_mode: 0=oneshot, 1=continuous\r\n");
+    } else {
+        capture_mode = (uint8_t) atoi(argv[0]);
+        image_size = po8030_get_image_size();
+
+        if(image_size > MAX_BUFF_SIZE) {
+            chprintf(chp, "Cannot prepare dcmi, image size too big.\r\n");
+            return;
+        }
+
+        if(image_size > (MAX_BUFF_SIZE/2)) {
+            double_buffering = 0;
+        } else {
+            double_buffering = 1;
+        }
+
+        if(sample_buffer != NULL) {
+            chprintf(chp, "Cannot prepare dcmi, buffer1 already allocated.\r\n");
+            return;
+        }
+        sample_buffer = (uint8_t*)malloc(image_size);
+        if(sample_buffer == NULL) {
+            chprintf(chp, "Could not allocate buffer1\r\n");
+            return;
+        }
+
+        if(capture_mode == CAPTURE_ONE_SHOT) {
+            dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
+            chprintf(chp, "DCMI prepared with single-buffering\r\n");
+        } else {
+            if(double_buffering == 0) {
+                dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
+                chprintf(chp, "DCMI prepared with single-buffering\r\n");
+            } else {
+                if(sample_buffer2 != NULL) {
+                    chprintf(chp, "Cannot prepare dcmi, buffer2 already allocated.\r\n");
+                    return;
+                }
+                sample_buffer2 = (uint8_t*)malloc(image_size);
+                if(sample_buffer2 == NULL) {
+                    chprintf(chp, "Could not allocate buffer2\r\n");
+                    return;
+                }
+                dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, (uint32_t*)sample_buffer2);
+                chprintf(chp, "DCMI prepared with double-buffering\r\n");
+            }
+        }
+    }
+}
+
+static void cmd_cam_dcmi_unprepare(BaseSequentialStream *chp, int argc, char **argv)
+{
+    (void) argc;
+    (void) argv;
+
+    dcmiUnprepare(&DCMID);
+
+    if(sample_buffer != NULL) {
+        free(sample_buffer);
+        sample_buffer = NULL;
+    }
+
+    if(sample_buffer2 != NULL) {
+        free(sample_buffer2);
+        sample_buffer2 = NULL;
+    }
+
+    chprintf(chp, "DCMI released correctly\r\n");
+
+}
 
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
@@ -339,6 +646,18 @@ const ShellCommand shell_commands[] = {
     {"config_save", cmd_config_save},
     {"config_load", cmd_config_load},
     {"config_erase", cmd_config_erase},
+    {"cam_brightness", cmd_cam_set_brightness},
+    {"cam_contrast", cmd_cam_set_contrast},
+    {"cam_adv_conf_fmt", cmd_cam_set_adv_conf_fmt},
+    {"cam_adv_conf_sub", cmd_cam_set_adv_conf_sub},
+    {"cam_adv_conf_win", cmd_cam_set_adv_conf_win},
+    {"cam_mirror", cmd_cam_set_mirror},
+    {"cam_gain", cmd_cam_set_gain},
+    {"cam_awb", cmd_cam_set_awb},
+    {"cam_ae", cmd_cam_set_ae},
+    {"cam_exposure", cmd_cam_set_exposure},
+    {"cam_dcmi_prepare", cmd_cam_dcmi_prepare},
+    {"cam_dcmi_unprepare", cmd_cam_dcmi_unprepare},
     {NULL, NULL}
 };
 

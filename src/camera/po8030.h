@@ -11,6 +11,8 @@ extern "C" {
 #endif
 
 #define PO8030_ADDR 0x6E
+#define PO8030_MAX_WIDTH 640
+#define PO8030_MAX_HEIGHT 480
 
 // Shared registers
 #define REG_DEVICE_ID_H 0x00
@@ -37,8 +39,12 @@ extern "C" {
 #define PO8030_REG_VSYNCSTARTROW_L 0x11
 #define PO8030_REG_VSYNCSTOPROW_H 0x12
 #define PO8030_REG_VSYNCSTOPROW_L 0x13
-#define PO8030_REG_RED_BALANCE 0x23
-#define PO8030_REG_BLUE_BALANCE 0x25
+#define PO8030_REG_INTTIME_H 0x17
+#define PO8030_REG_INTTIME_M 0x18
+#define PO8030_REG_INTTIME_L 0x19
+#define PO8030_REG_WB_RGAIN 0x23
+#define PO8030_REG_WB_GGAIN 0x24
+#define PO8030_REG_WB_BGAIN 0x25
 #define PO8030_REG_AUTO_FWX1_H 0x35
 #define PO8030_REG_AUTO_FWX1_L 0x36
 #define PO8030_REG_AUTO_FWX2_H 0x37
@@ -62,6 +68,7 @@ extern "C" {
 // Bank B registers
 #define PO8030_REG_ISP_FUNC_2 0x06 // Embossing, sketch, proximity.
 #define PO8030_REG_FORMAT 0x4E
+#define PO8030_REG_SKETCH_OFFSET 0x8F
 #define PO8030_REG_SCALE_X 0x93
 #define PO8030_REG_SCALE_Y 0x94
 #define PO8030_REG_SCALE_TH_H 0x95
@@ -102,6 +109,20 @@ typedef enum {
     SIZE_QQVGA = 0x02
 } image_size_t;
 
+typedef enum {
+    SUBSAMPLING_X1 = 0x20,
+    SUBSAMPLING_X2 = 0x40,
+    SUBSAMPLING_X4 = 0x80
+} subsampling_t;
+
+struct po8030_configuration {
+	uint16_t 		width;
+	uint16_t 		height;
+	format_t 		curr_format;
+	subsampling_t 	curr_subsampling_x;
+	subsampling_t 	curr_subsampling_y;
+};
+
 void po8030_init(void);
 int8_t po8030_read_id(uint16_t *id);
 int8_t po8030_set_bank(uint8_t bank);
@@ -113,6 +134,22 @@ int8_t po8030_set_qqvga(void);
 int8_t po8030_set_scale_buffer_size(format_t fmt, image_size_t imgsize);
 int8_t po8030_config(format_t fmt, image_size_t imgsize);
 i2cflags_t get_last_i2c_error(void);
+int8_t po8030_set_brightness(uint8_t value);
+int8_t po8030_set_contrast(uint8_t value);
+int8_t po8030_advanced_config(format_t fmt, unsigned int x1, unsigned int y1, unsigned int width, unsigned int height, subsampling_t subsampling_x, subsampling_t subsampling_y);
+int8_t po8030_set_mirror(uint8_t vertical, uint8_t horizontal);
+int8_t po8030_set_awb(uint8_t awb);
+int8_t po8030_set_rgb_gain(uint8_t r, uint8_t g, uint8_t b);
+int8_t po8030_set_ae(uint8_t ae);
+int8_t po8030_set_exposure(uint16_t integral, uint8_t fractional);
+uint32_t po8030_get_image_size(void);
+
+// Utility functions used with the shell.
+void po8030_save_current_format(format_t fmt);
+format_t po8030_get_saved_format(void);
+void po8030_save_current_subsampling(subsampling_t x, subsampling_t y);
+subsampling_t po8030_get_saved_subsampling_x(void);
+subsampling_t po8030_get_saved_subsampling_y(void);
 
 #ifdef __cplusplus
 }
