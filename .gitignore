@@ -19,3 +19,7 @@ tags*
 # Packager generated file
 CMakeLists.txt
 src/src.mk
+*.DS_Store
+/CodeBlocks.default.conf
+/aseba-discovery.cbp
+/aseba-discovery.layout
