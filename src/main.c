@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "ch.h"
 #include "hal.h"
 #include "chprintf.h"
@@ -34,6 +35,10 @@ unsigned char txComplete = 0;
 unsigned char btnState = 0;
 unsigned char dcmiErrorFlag = 0;
 
+#define SPI_BUFF_LEN 16
+static uint8_t spiRxBuff[SPI_BUFF_LEN];
+static uint8_t spiTxBuff[SPI_BUFF_LEN];
+
 void frameEndCb(DCMIDriver* dcmip);
 void dmaTransferEndCb(DCMIDriver* dcmip);
 void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err);
@@ -52,6 +57,10 @@ static bool load_config(void)
 }
 
 void my_button_cb(void) {
+
+	txComplete = 1;
+
+/*
     if(btnState == 0) {
         btnState = 1;
         palSetPad(GPIOD, 15); // Blue.
@@ -73,6 +82,7 @@ void my_button_cb(void) {
             }
         }
     }
+*/	
 }
 
 void frameEndCb(DCMIDriver* dcmip) {
@@ -90,6 +100,97 @@ void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err) {
    (void) err;
     dcmiErrorFlag = 1;
 	//chSysHalt("DCMI error");
+}
+
+/*
+ * SPI image exchanger thread.
+ */
+static THD_WORKING_AREA(spi_thread_wa, 1024);
+static THD_FUNCTION(spi_thread, p) {
+	(void)p;
+	chRegSetThreadName("SPI thread");
+	uint32_t i = 0;
+	uint16_t transCount = 0; // image size / SPI_BUFF_LEN
+	uint8_t id = 0;
+	
+	for(i=0; i<SPI_BUFF_LEN; i++) {
+		spiTxBuff[i] = i+1;
+	}
+
+	static const SPIConfig hs_spicfg = {
+		NULL,
+		GPIOA,
+		15,
+		SPI_CR1_BR_1 //SPI_CR1_BR_2 | SPI_CR1_BR_1
+	};		
+	
+	while (true) {
+		palSetPad(GPIOD, 15); // Blue.
+		//chprintf((BaseSequentialStream *)&SDU1, "Waiting for command...\r\n");
+		memset(spiRxBuff, 0x00, SPI_BUFF_LEN);	
+		spiSelect(&SPID1);
+		//palClearPad(GPIOA, 15);
+		//chThdSleepMilliseconds(20);
+		//spiStart(&SPID1, &hs_spicfg);
+		spiExchange(&SPID1, SPI_BUFF_LEN, spiTxBuff, spiRxBuff);
+		//spiStop(&SPID1);
+		//spiReceive(&SPID1, SPI_BUFF_LEN, spiRxBuff);
+		//chThdSleepMilliseconds(20);
+		spiUnselect(&SPID1);
+		//palSetPad(GPIOA, 15);
+		
+		chprintf((BaseSequentialStream *)&SDU1, "recv: %d, %d, %d, %d, %d, %d, %d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[2], spiRxBuff[3], spiRxBuff[SPI_BUFF_LEN-3], spiRxBuff[SPI_BUFF_LEN-2], spiRxBuff[SPI_BUFF_LEN-1]);		
+		
+		if(spiRxBuff[0]!=0xAA || spiRxBuff[1]!=0xBB) {
+			palTogglePad(GPIOD, 13) ; // Orange.
+			//chThdSleepMilliseconds(100);
+			//chprintf((BaseSequentialStream *)&SDU1, "received %d, %d\r\n", spiRxBuff[0], spiRxBuff[1]);
+			//break;
+			//continue;
+		}
+		if(spiTxBuff[0] >= SPI_BUFF_LEN*10) {
+			for(i=0; i<SPI_BUFF_LEN; i++) {
+				spiTxBuff[i] = i;
+			}
+		} else {
+			for(i=0; i<SPI_BUFF_LEN; i++) {
+				spiTxBuff[i] += SPI_BUFF_LEN;
+			}		
+		}
+		chThdSleepMilliseconds(200);
+		continue;
+		
+/*
+		id = 0;
+		for(i=0; i<76800; i++) {
+			sample_buffer[i] = id;
+			if(id == 255) {
+				id = 0;
+			} else {
+				id++;
+			}
+		}
+*/
+		palSetPad(GPIOD, 14); // Red.
+		for(transCount=0; transCount<1200; transCount++) {
+			spiSelect(&SPID1);
+			spiExchange(&SPID1, SPI_BUFF_LEN, &sample_buffer[transCount*SPI_BUFF_LEN], spiRxBuff);
+			//chprintf((BaseSequentialStream *)&SDU1, "Sent packet %d...\r\n", transCount);
+			spiUnselect(&SPID1);
+		}
+		palClearPad(GPIOD, 14); // Red.
+		palClearPad(GPIOD, 15); // Blue.
+		palSetPad(GPIOD, 13) ; // Orange.
+//		dcmiStartOneShot(&DCMID);
+		
+		//spiExchange(&SPID1, SPI_BUFF_LEN*75, &sample_buffer[0], spiRxBuff);
+		//chprintf((BaseSequentialStream *)&SDU1, "Image sent\r\n");
+		
+		//palTogglePad(GPIOD, 15); // Blue.
+		//spiReceive(&SPID1, SPI_BUFF_LEN, spiRxBuff);
+		//spiExchange(&SPID1, SPI_BUFF_LEN, spiTxBuff, spiRxBuff);
+		//chprintf((BaseSequentialStream *)&SDU1, "%d, %d, %d, %d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[SPI_BUFF_LEN-2], spiRxBuff[SPI_BUFF_LEN-1]);
+	}
 }
 
 int main(void)
@@ -144,13 +245,72 @@ int main(void)
     demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    shell_start();
+    //shell_start();
 
     /* Configure PO8030 camera. */
     po8030_init();
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
+
+	/*
+	capture_mode = CAPTURE_ONE_SHOT;
+	double_buffering = 0;
+	po8030_save_current_format(FORMAT_YYYY);
+	po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	sample_buffer = (uint8_t*)malloc(po8030_get_image_size());
+	dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
+	palSetPad(GPIOD, 13) ; // Orange.
+	dcmiStartOneShot(&DCMID);
+	*/
+	
+	uint32_t i = 0;
+	uint8_t id = 0;	
+	sample_buffer = malloc(76800);
+	id = 0;
+	for(i=0; i<76800; i++) {
+		sample_buffer[i] = id;
+		if(id == 255) {
+			id = 0;
+		} else {
+			id++;
+		}
+	}	
+	
+	/*
+	* Maximum speed SPI configuration (21MHz, CPHA=0, CPOL=0, MSb first).
+	*/
+	// static const SPIConfig hs_spicfg = {
+		// NULL,
+		// GPIOB,
+		// 12,
+		// 0
+	// };
+	//static const SPIConfig hs_spicfg = {
+	//	NULL,
+	//	GPIOB,
+	//	12,
+	//	SPI_CR1_BR_0 //SPI_CR1_BR_2 | SPI_CR1_BR_1
+	//};
+	//static const SPIConfig hs_spicfg = {
+	//	NULL,
+	//	GPIOB,
+	//	12,
+	//	SPI_CR1_BR_2 | SPI_CR1_BR_1
+	//};
+	
+	static const SPIConfig hs_spicfg = {
+		NULL,
+		GPIOA,
+		15,
+		SPI_CR1_BR_1 //SPI_CR1_BR_2 | SPI_CR1_BR_1
+	};	
+	
+	//spiAcquireBus(&SPID1);              /* Acquire ownership of the bus.    */		
+	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
+	chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
+	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
 
     /* Infinite loop. */
     while (1) {
@@ -167,6 +327,7 @@ int main(void)
 
         //chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", dmaStreamGetTransactionSize(DCMID.dmastp));
 
+		
         if(txComplete == 1) {
             txComplete = 0;
 
@@ -185,6 +346,7 @@ int main(void)
                 }
             }
         }
+
     }
 }
 
