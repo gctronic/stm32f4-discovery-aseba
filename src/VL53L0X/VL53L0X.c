@@ -1,6 +1,16 @@
+/**
+ * @file    VL53L0X.c
+ * @brief   High level functions to use the VL53L0X TOF sensor.
+ *
+ * @author  Eliot Ferragni
+ */
+
+
 #include "VL53L0X.h"
 #include "Api/core/inc/vl53l0x_api.h"
-//init struct
+
+
+//////////////////// PUBLIC FUNCTIONS /////////////////////////
 
 VL53L0X_Error VL53L0X_init(VL53L0X_Dev_t* device){
 
@@ -14,33 +24,33 @@ VL53L0X_Error VL53L0X_init(VL53L0X_Dev_t* device){
 //init
 	if(status == VL53L0X_ERROR_NONE)
     {
-    	// Data initialization
-        status = VL53L0X_DataInit(device); 
+    	// Structure and device initialisation
+        status = VL53L0X_DataInit(device);
     }
 
     if(status == VL53L0X_ERROR_NONE)
     {
-    	// get device info
-        status = VL53L0X_GetDeviceInfo(device, &(dev->DeviceInfo)); 
+    	// Get device info
+        status = VL53L0X_GetDeviceInfo(device, &(device->DeviceInfo));
     }
 
     if(status == VL53L0X_ERROR_NONE)
     {
     	// Device Initialization
-        status = VL53L0X_StaticInit(device); 
+        status = VL53L0X_StaticInit(device);
     }
 
 //calibration
  	if(status == VL53L0X_ERROR_NONE)
     {
-    	// Device Initialization
+    	// SPAD calibration
         status = VL53L0X_PerformRefSpadManagement(device,
         		&refSpadCount, &isApertureSpads);
     }
 
     if(status == VL53L0X_ERROR_NONE)
     {
-    	// Device Initialization
+    	// Calibration
         status = VL53L0X_PerformRefCalibration(device,
         		&VhvSettings, &PhaseCal);
     }
@@ -49,7 +59,10 @@ VL53L0X_Error VL53L0X_init(VL53L0X_Dev_t* device){
 }
 
 VL53L0X_Error VL53L0X_configAccuracy(VL53L0X_Dev_t* device, VL53L0X_AccuracyMode accuracy){
-//accuracy config
+
+	VL53L0X_Error status = VL53L0X_ERROR_NONE;
+
+//Activation Limits
     if (status == VL53L0X_ERROR_NONE) {
         status = VL53L0X_SetLimitCheckEnable(device,
         		VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, 1);
@@ -61,6 +74,7 @@ VL53L0X_Error VL53L0X_configAccuracy(VL53L0X_Dev_t* device, VL53L0X_AccuracyMode
     }
 
 //specific accuracy config
+//copied from ST example and API Guide
     switch(accuracy){
 
     	case VL53L0X_DEFAULT_MODE:
@@ -76,44 +90,44 @@ VL53L0X_Error VL53L0X_configAccuracy(VL53L0X_Dev_t* device, VL53L0X_AccuracyMode
 		    }
 		    break;
 
-		case VL53L0X_HIGH_ACCURACY:			
+		case VL53L0X_HIGH_ACCURACY:
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE,
 		        		(FixPoint1616_t)(0.25*65536));
-			}			
+			}
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE,
-		        		(FixPoint1616_t)(18*65536));			
+		        		(FixPoint1616_t)(18*65536));
 		    }
 		    if (status == VL53L0X_ERROR_NONE) {
-		        status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice,
+		        status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(device,
 		        		200000);
 		    }
 			break;
 
-		case VL53L0X_LONG_RANGE:		
+		case VL53L0X_LONG_RANGE:
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE,
 		        		(FixPoint1616_t)(0.1*65536));
-			}			
+			}
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE,
-		        		(FixPoint1616_t)(60*65536));			
+		        		(FixPoint1616_t)(60*65536));
 		    }
 		    if (status == VL53L0X_ERROR_NONE) {
-		        status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice,
+		        status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(device,
 		        		33000);
 			}
 		    if (status == VL53L0X_ERROR_NONE) {
-		        status = VL53L0X_SetVcselPulsePeriod(device, 
+		        status = VL53L0X_SetVcselPulsePeriod(device,
 				        VL53L0X_VCSEL_PERIOD_PRE_RANGE, 18);
 		    }
 		    if (status == VL53L0X_ERROR_NONE) {
-		        status = VL53L0X_SetVcselPulsePeriod(device, 
+		        status = VL53L0X_SetVcselPulsePeriod(device,
 				        VL53L0X_VCSEL_PERIOD_FINAL_RANGE, 14);
 		    }
 			break;
@@ -123,21 +137,23 @@ VL53L0X_Error VL53L0X_configAccuracy(VL53L0X_Dev_t* device, VL53L0X_AccuracyMode
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE,
 		        		(FixPoint1616_t)(0.25*65536));
-			}			
+			}
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetLimitCheckValue(device,
 		        		VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE,
-		        		(FixPoint1616_t)(32*65536));			
+		        		(FixPoint1616_t)(32*65536));
 		    }
 		    if (status == VL53L0X_ERROR_NONE) {
 		        status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(device,
 		        		30000);
-		    }	
+		    }
 			break;
 		default:
 			status = VL53L0X_ERROR_INVALID_PARAMS;
 			break;
     }
+
+    return status;
 }
 
 VL53L0X_Error VL53L0X_startMeasure(VL53L0X_Dev_t* device, VL53L0X_DeviceModes mode){
