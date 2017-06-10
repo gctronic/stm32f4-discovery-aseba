@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _VL53L0X_API_RANGING_H_
 
 #include "vl53l0x_def.h"
-#include "vl53l0x_platform.h"
+#include "../../platform/inc/vl53l0x_platform.h"
 
 
 #ifdef __cplusplus

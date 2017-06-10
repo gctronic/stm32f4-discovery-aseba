@@ -34,10 +34,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * provide variable word size byte/Word/dword VL6180x register access via i2c
  *
  */
-#include "vl53l0x_platform.h"
-#include "vl53l0x_i2c_platform.h"
-#include "vl53l0x_api.h"
-#include <Windows.h>
+#include "../inc/vl53l0x_platform.h"
+#include "../inc/vl53l0x_i2c_platform.h"
+#include "../../core/inc/vl53l0x_api.h"
 
 #define LOG_FUNCTION_START(fmt, ... )           _LOG_FUNCTION_START(TRACE_MODULE_PLATFORM, fmt, ##__VA_ARGS__)
 #define LOG_FUNCTION_END(status, ... )          _LOG_FUNCTION_END(TRACE_MODULE_PLATFORM, status, ##__VA_ARGS__)
@@ -89,17 +88,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VL53L0X_DoneI2CAcces(Dev)    /* todo mutex release */
 
 
-VL53L0X_Error VL53L0X_LockSequenceAccess(VL53L0X_DEV Dev){
-    VL53L0X_Error Status = VL53L0X_ERROR_NONE;
-
-    return Status;
-}
-
-VL53L0X_Error VL53L0X_UnlockSequenceAccess(VL53L0X_DEV Dev){
-    VL53L0X_Error Status = VL53L0X_ERROR_NONE;
-
-    return Status;
-}
 
 // the ranging_sensor_comms.dll will take care of the page selection
 VL53L0X_Error VL53L0X_WriteMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pdata, uint32_t count){
@@ -261,13 +249,12 @@ VL53L0X_Error  VL53L0X_RdDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t *data){
 #define VL53L0X_POLLINGDELAY_LOOPNB  250
 VL53L0X_Error VL53L0X_PollingDelay(VL53L0X_DEV Dev){
     VL53L0X_Error status = VL53L0X_ERROR_NONE;
+    volatile uint32_t i;
     LOG_FUNCTION_START("");
 
-    const DWORD cTimeout_ms = 1;
-    HANDLE hEvent = CreateEvent(0, TRUE, FALSE, 0);
-    if(hEvent != NULL)
-    {
-        WaitForSingleObject(hEvent,cTimeout_ms);
+    for(i=0;i<VL53L0X_POLLINGDELAY_LOOPNB;i++){
+        //Do nothing
+        asm("nop");
     }
 
     LOG_FUNCTION_END(status);
