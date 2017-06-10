@@ -4,6 +4,7 @@ depends:
     - parameter
     - crc
     - chibios-syscalls
+    - VL53L0X
 
 source:
     - src/config_flash_storage.c
