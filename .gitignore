@@ -18,4 +18,4 @@ tags*
 
 # Packager generated file
 CMakeLists.txt
-src/src.mk
+#src/src.mk
