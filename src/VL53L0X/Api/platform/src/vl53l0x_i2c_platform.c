@@ -6,20 +6,22 @@
 
 int32_t VL53L0X_write_multi(uint8_t address, uint8_t index, uint8_t *pdata, uint32_t count) {
 
+  systime_t timeout = MS2ST(50); // 4 ms
   VL53L0X_Error status = VL53L0X_ERROR_NONE;
   msg_t rdymsg = MSG_OK;
 
-  uint8_t txbuff[count+1];
+  uint8_t txbuff[32];
   uint8_t rxbuff[0];
+  uint8_t nbDatas = count+1;
 
-  txbuff[0]=index;
+  txbuff[0] = index;
 
-  while(count>0){
+  while(count > 0){
     txbuff[count] = pdata[count-1];
     count--;
   }
   i2cAcquireBus(&I2CD1);
-  rdymsg = i2cMasterTransmit(&I2CD1, address>>1, txbuff, count+1, rxbuff, 0);
+  rdymsg = i2cMasterTransmitTimeout(&I2CD1, address>>1, txbuff, nbDatas, rxbuff, 0, timeout);
   i2cReleaseBus(&I2CD1);
 
   switch(rdymsg){
@@ -37,13 +39,14 @@ int32_t VL53L0X_write_multi(uint8_t address, uint8_t index, uint8_t *pdata, uint
 
 int32_t VL53L0X_read_multi(uint8_t address, uint8_t index, uint8_t *pdata, uint32_t count) {
 
+  systime_t timeout = MS2ST(50); // 4 ms
   VL53L0X_Error status = VL53L0X_ERROR_NONE;
   msg_t rdymsg = MSG_OK;
 
   uint8_t txbuff[1] = {index};
 
   i2cAcquireBus(&I2CD1);
-  rdymsg = i2cMasterTransmit(&I2CD1, address>>1, txbuff, 1, pdata, count);
+  rdymsg = i2cMasterTransmitTimeout(&I2CD1, address>>1, txbuff, 1, pdata, count, timeout);
   i2cReleaseBus(&I2CD1);
 
   switch(rdymsg){

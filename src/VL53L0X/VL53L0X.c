@@ -5,12 +5,50 @@
  * @author  Eliot Ferragni
  */
 
-
+#include "ch.h"
 #include "VL53L0X.h"
 #include "Api/core/inc/vl53l0x_api.h"
+#include "../LED_RGB/led_rgb.h"
 
 
 //////////////////// PUBLIC FUNCTIONS /////////////////////////
+static THD_WORKING_AREA(waVL53L0XThd, 2048);
+static THD_FUNCTION(VL53L0XThd, arg) {
+
+	(void)arg;
+	uint8_t i = 0;
+	uint16_t value = 0;
+	uint8_t deviceAddr[3] = {VL53L0X_1_DEV_CARD_ADDR, VL53L0X_2_DEV_CARD_ADDR, VL53L0X_3_DEV_CARD_ADDR};
+	uint8_t ledAddr[3] = {LED1_DEV_CARD_ADDR, LED2_DEV_CARD_ADDR, LED3_DEV_CARD_ADDR};
+
+	VL53L0X_Dev_t device[3];
+
+    for(i = 0 ; i < 3 ; i++){
+
+    	device[i].I2cDevAddr = deviceAddr[i];
+    	VL53L0X_init(&device[i]);
+    	VL53L0X_configAccuracy(&device[i], VL53L0X_DEFAULT_MODE);
+    	VL53L0X_startMeasure(&device[i], VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+    	led_rgb_set_current(ledAddr[i], LED_RGB_MAX_VALUE);
+    }
+
+
+    /* Reader thread loop.*/
+    while (TRUE) {
+    	for(i = 0 ; i < 3 ; i++){
+
+    		VL53L0X_getLastMeasure(&device[i]);
+
+	    	value = device[i].Data.LastRangeMeasure.RangeMilliMeter;
+	    	value = value>>5;
+
+	    	led_rgb_set_intensity(ledAddr[i], LED_RGB_BLUE, value);
+    	}
+
+    	chThdSleepMilliseconds(100);
+    }
+}
+
 
 VL53L0X_Error VL53L0X_init(VL53L0X_Dev_t* device){
 
@@ -178,5 +216,11 @@ VL53L0X_Error VL53L0X_stopMeasure(VL53L0X_Dev_t* device){
 	return VL53L0X_StopMeasurement(device);
 }
 
-
+void VL53L0X_init_demo(void){
+	chThdCreateStatic(waVL53L0XThd,
+                     sizeof(waVL53L0XThd),
+                     NORMALPRIO + 10,
+                     VL53L0XThd,
+                     NULL);
+}
 

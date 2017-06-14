@@ -13,6 +13,10 @@
 
 #define USE_I2C_2V8
 
+#define VL53L0X_1_DEV_CARD_ADDR		0x40
+#define VL53L0X_2_DEV_CARD_ADDR		0x42
+#define VL53L0X_3_DEV_CARD_ADDR		0x44
+
 //////////////////// PROTOTYPES PUBLIC FUNCTIONS /////////////////////
 
 /**
@@ -58,5 +62,7 @@ VL53L0X_Error VL53L0X_getLastMeasure(VL53L0X_Dev_t* device);
  * @return 			VL53L0X_Error See ::VL53L0X_Error
  */	
 VL53L0X_Error VL53L0X_stopMeasure(VL53L0X_Dev_t* device);
+
+void VL53L0X_init_demo(void);
 
 #endif /* VL53L0X_H*/
