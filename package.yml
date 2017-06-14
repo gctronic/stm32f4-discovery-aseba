@@ -5,6 +5,7 @@ depends:
     - crc
     - chibios-syscalls
     - VL53L0X
+    - LED_RGB
 
 source:
     - src/config_flash_storage.c

@@ -20,6 +20,7 @@
 #include "aseba_vm/aseba_bridge.h"
 
 #include "VL53L0X/VL53L0X.h"
+#include "LED_RGB/led_rgb.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -81,6 +82,7 @@ int main(void)
     /* If button is pressed, start in translator mode. */
     if (palReadPad(GPIOA, GPIOA_BUTTON)) {
         //aseba_bridge((BaseSequentialStream *)&SDU1);
+        led_rgb_init_demo();
         while (true) {
             chThdSleepMilliseconds(100);
         }
