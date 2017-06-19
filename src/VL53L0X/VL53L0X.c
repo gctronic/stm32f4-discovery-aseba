@@ -6,9 +6,13 @@
  */
 
 #include "ch.h"
+#include "hal.h"
 #include "VL53L0X.h"
 #include "Api/core/inc/vl53l0x_api.h"
 #include "../LED_RGB/led_rgb.h"
+#include "shell.h"
+#include "chprintf.h"
+#include "usbcfg.h"
 
 
 //////////////////// PUBLIC FUNCTIONS /////////////////////////
@@ -17,9 +21,10 @@ static THD_FUNCTION(VL53L0XThd, arg) {
 
 	(void)arg;
 	uint8_t i = 0;
-	uint16_t value = 0;
+	uint16_t value[3];
 	uint8_t deviceAddr[3] = {VL53L0X_1_DEV_CARD_ADDR, VL53L0X_2_DEV_CARD_ADDR, VL53L0X_3_DEV_CARD_ADDR};
 	uint8_t ledAddr[3] = {LED1_DEV_CARD_ADDR, LED2_DEV_CARD_ADDR, LED3_DEV_CARD_ADDR};
+
 
 	VL53L0X_Dev_t device[3];
 
@@ -27,8 +32,9 @@ static THD_FUNCTION(VL53L0XThd, arg) {
 
     	device[i].I2cDevAddr = deviceAddr[i];
     	VL53L0X_init(&device[i]);
-    	VL53L0X_configAccuracy(&device[i], VL53L0X_DEFAULT_MODE);
+    	VL53L0X_configAccuracy(&device[i], VL53L0X_LONG_RANGE);
     	VL53L0X_startMeasure(&device[i], VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+    	led_rgb_set_intensity_all(ledAddr[i], 0, 0, 0);
     	led_rgb_set_current(ledAddr[i], LED_RGB_MAX_VALUE);
     }
 
@@ -39,12 +45,15 @@ static THD_FUNCTION(VL53L0XThd, arg) {
 
     		VL53L0X_getLastMeasure(&device[i]);
 
-	    	value = device[i].Data.LastRangeMeasure.RangeMilliMeter;
-	    	value = value>>5;
-
-	    	led_rgb_set_intensity(ledAddr[i], LED_RGB_BLUE, value);
+	    	value[i] = device[i].Data.LastRangeMeasure.RangeMilliMeter;
+	    
+	    	led_rgb_set_intensity(ledAddr[i], LED_RGB_GREEN, value[i]>>5);
+	    	
     	}
+		//chprintf((BaseSequentialStream *)&SDU1, "capteur 1 = %d    capteur 2 = %d      capteur 3 = %d\n" , value[0], value[1], value[2]);
+		chprintf((BaseSequentialStream *)&SDU1, "%d\n" , value[2]);
 
+    	
     	chThdSleepMilliseconds(100);
     }
 }
