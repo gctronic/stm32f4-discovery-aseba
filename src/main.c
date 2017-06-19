@@ -93,7 +93,7 @@ int main(void)
         VL53L0X_init_demo();
     }
 
-    //demo_acc_start(accelerometer_cb);e
+    //demo_acc_start(accelerometer_cb);
     //demo_button_start(button_cb);
 
     /* Start shell on the USB port. */

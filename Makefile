@@ -97,12 +97,13 @@ PROJECT = aseba-discovery
 
 # Imported source files and paths
 CHIBIOS = ./ChibiOS/
+CHIBIOS_EXT = ./ChibiOS-ext/
 # Startup files.
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 # HAL-OSAL files.
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
-include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
+include $(CHIBIOS_EXT)/os/hal/boards/ST_STM32F4_DISCOVERY_Dev_card/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 # RTOS files.
 include $(CHIBIOS)/os/rt/rt.mk

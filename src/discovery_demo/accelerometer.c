@@ -52,8 +52,8 @@ void demo_acc_start(accelerometer_callback callback)
     static const SPIConfig spi1cfg = {
         NULL,
         /* HW dependent part.*/
-        GPIOE,
-        GPIOE_CS_SPI,
+        GPIOD,
+        GPIOD_SPI1_CS1,
         SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA
     };
     spiStart(&SPID1, &spi1cfg);
