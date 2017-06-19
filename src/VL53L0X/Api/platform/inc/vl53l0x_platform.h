@@ -51,10 +51,13 @@ extern "C" {
  */
 
 typedef uint8_t VL53L0X_AccuracyMode;
-
+//1.2m, 30ms
 #define VL53L0X_DEFAULT_MODE    ((VL53L0X_AccuracyMode) 0)
+//1.2m, 200ms
 #define VL53L0X_HIGH_ACCURACY   ((VL53L0X_AccuracyMode) 1)
+//2m, 33ms
 #define VL53L0X_LONG_RANGE      ((VL53L0X_AccuracyMode) 2)
+//1.2m, 20ms
 #define VL53L0X_HIGH_SPEED      ((VL53L0X_AccuracyMode) 3)
 
 /**
