@@ -1,5 +1,6 @@
 #include "po8030.h"
 #include "ch.h"
+#include "hal.h"
 #include "usbcfg.h"
 #include "chprintf.h"
 
@@ -76,6 +77,32 @@ int8_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
 
 void po8030_init(void) {
 
+    palWritePad(GPIOD, GPIOD_StandBy_1, PAL_LOW);
+
+    /*
+     * PWM configuration structure.
+     * Cyclic callback enabled, channels 1 and 4 enabled without callbacks,
+     * the active state is a logic one.
+     */
+    static const PWMConfig pwmcfg = {
+        168000000,                                   /* 16M8Hz PWM timer frequency.  */
+        8,                                      /* PWM frequency = 168/8 = 21MHz.    */
+        NULL,
+        {
+         {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+         {PWM_OUTPUT_DISABLED, NULL},
+         {PWM_OUTPUT_DISABLED, NULL},
+         {PWM_OUTPUT_DISABLED, NULL}
+        },
+        /* HW dependent part.*/
+        0,
+        0
+    };
+
+    pwmStart(&PWMD1, &pwmcfg);
+    //set duty cycle to 50% 8 (second argument of pwmcfg)
+    pwmEnableChannel(&PWMD1, 0, (pwmcnt_t) 4);
+
     static const I2CConfig i2cfg1 = {
         OPMODE_I2C,
         400000,
@@ -84,11 +111,13 @@ void po8030_init(void) {
     i2cStart(&I2CD1, &i2cfg1);
 
     // Keep reset pin low for at least 8 x MCLK cycles...100 ms is more than enough.
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_HIGH);
+    palWritePad(GPIOE, GPIOE_Reset_1, PAL_HIGH);
     chThdSleepMilliseconds(10);
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_LOW);
+    palWritePad(GPIOE, GPIOE_Reset_1, PAL_LOW);
     chThdSleepMilliseconds(100);
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_HIGH);
+    palWritePad(GPIOE, GPIOE_Reset_1, PAL_HIGH);
+    //need to wait for the reset signal to go high
+    chThdSleepMilliseconds(100);
 
 }
 
