@@ -63,8 +63,8 @@ void can_init(void)
     iomode_t mode = PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL
                     | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_PUDR_FLOATING
                     | PAL_STM32_ALTERNATE(9);
-    palSetPadMode(GPIOD, GPIOD_PIN0, mode); // RX
-    palSetPadMode(GPIOD, GPIOD_PIN1, mode); // TX
+    palSetPadMode(GPIOD, GPIOD_CAN1_RX, mode); // RX
+    palSetPadMode(GPIOD, GPIOD_CAN1_TX, mode); // TX
     canStart(&CAND1, &can1_config);
 }
 

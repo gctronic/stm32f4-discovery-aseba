@@ -105,6 +105,7 @@ include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 #include $(CHIBIOS)/os/hal/boards/ST_STM32F4_DISCOVERY/board.mk
 include $(CHIBIOS_EXT)/os/hal/boards/ST_STM32F4_DISCOVERY_EPUCK2/board.mk
+include $(CHIBIOS_EXT)/os/hal/boards/ST_STM32F4_DISCOVERY_Dev_card/board.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
 # RTOS files.
 include $(CHIBIOS)/os/rt/rt.mk
