@@ -26,7 +26,6 @@
 parameter_namespace_t parameter_root, aseba_ns;
 
 uint8_t capture_mode = CAPTURE_ONE_SHOT;
-//uint8_t capture_mode =  CAPTURE_CONTINUOUS;
 uint8_t *sample_buffer = NULL;
 uint8_t *sample_buffer2 = NULL;
 uint8_t double_buffering = 0;
@@ -64,22 +63,24 @@ void my_button_cb(void) {
         }
     } else if(btnState == 1) {
         btnState = 0;
-        if(capture_mode == CAPTURE_ONE_SHOT) {
-            txComplete = 1;
-        } else {
-            if(dcmiStopStream(&DCMID) == MSG_OK) {
-                txComplete = 1;
-            } else {
-                dcmiErrorFlag = 1;
-            }
-        }
+        // if(capture_mode == CAPTURE_ONE_SHOT) {
+        //     txComplete = 1;
+        // } else {
+        //     if(dcmiStopStream(&DCMID) == MSG_OK) {
+        //         txComplete = 1;
+        //     } else {
+        //         dcmiErrorFlag = 1;
+        //     }
+        // }
     }
 }
 
 void frameEndCb(DCMIDriver* dcmip) {
     (void) dcmip;
     palTogglePad(GPIOD, 13) ; // Orange.
-    txComplete = 1;
+    if(btnState == 1) {
+    	txComplete = 1;
+    }
 }
 
 void dmaTransferEndCb(DCMIDriver* dcmip) {
@@ -184,6 +185,7 @@ int main(void)
 
             if(capture_mode == CAPTURE_ONE_SHOT) {
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
+                dcmiStartOneShot(&DCMID);
             } else {
                 if(double_buffering == 1) { // Send both images.
                     chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
