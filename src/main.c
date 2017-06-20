@@ -26,6 +26,7 @@
 parameter_namespace_t parameter_root, aseba_ns;
 
 uint8_t capture_mode = CAPTURE_ONE_SHOT;
+//uint8_t capture_mode =  CAPTURE_CONTINUOUS;
 uint8_t *sample_buffer = NULL;
 uint8_t *sample_buffer2 = NULL;
 uint8_t double_buffering = 0;
@@ -78,6 +79,7 @@ void my_button_cb(void) {
 void frameEndCb(DCMIDriver* dcmip) {
     (void) dcmip;
     palTogglePad(GPIOD, 13) ; // Orange.
+    txComplete = 1;
 }
 
 void dmaTransferEndCb(DCMIDriver* dcmip) {
@@ -103,9 +105,9 @@ int main(void)
 
 
     // UART2 on PA2(TX) and PA3(RX)
-    sdStart(&SD2, NULL);
-    palSetPadMode(GPIOA, 2, PAL_MODE_ALTERNATE(7));
-    palSetPadMode(GPIOA, 3, PAL_MODE_ALTERNATE(7));
+    //sdStart(&SD2, NULL);
+    //palSetPadMode(GPIOA, 2, PAL_MODE_ALTERNATE(7));
+    //palSetPadMode(GPIOA, 3, PAL_MODE_ALTERNATE(7));
 
     // serial-over-USB CDC driver.
     sduObjectInit(&SDU1);
@@ -151,6 +153,13 @@ int main(void)
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
+
+    po8030_save_current_format(FORMAT_YYYY);
+    po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
+    po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
+    uint32_t image_size = po8030_get_image_size();
+    sample_buffer = (uint8_t*)malloc(image_size);
+    dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
 
     /* Infinite loop. */
     while (1) {
