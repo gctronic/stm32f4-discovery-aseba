@@ -51,8 +51,7 @@ static THD_FUNCTION(VL53L0XThd, arg) {
 	    	
     	}
 		//chprintf((BaseSequentialStream *)&SDU1, "capteur 1 = %d    capteur 2 = %d      capteur 3 = %d\n" , value[0], value[1], value[2]);
-		chprintf((BaseSequentialStream *)&SDU1, "%d\n" , value[2]);
-
+		//chprintf((BaseSequentialStream *)&SDU1, "%d\n" , value[2]);
     	
     	chThdSleepMilliseconds(100);
     }
