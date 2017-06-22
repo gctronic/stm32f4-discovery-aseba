@@ -13,6 +13,8 @@ extern "C" {
 #define PO8030_ADDR 0x6E
 #define PO8030_MAX_WIDTH 640
 #define PO8030_MAX_HEIGHT 480
+#define PO8030_HI_Z_ACTIVATED    0x40
+#define PO8030_HI_Z_DESACTIVATED    0x00
 
 // Shared registers
 #define REG_DEVICE_ID_H 0x00
@@ -123,6 +125,9 @@ struct po8030_configuration {
 	subsampling_t 	curr_subsampling_y;
 };
 
+
+void select_camera(uint8_t camera);
+void toggle_camera(void);
 void po8030_init(void);
 int8_t po8030_read_id(uint16_t *id);
 int8_t po8030_set_bank(uint8_t bank);

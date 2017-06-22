@@ -30,6 +30,9 @@ uint8_t *sample_buffer = NULL;
 uint8_t *sample_buffer2 = NULL;
 uint8_t double_buffering = 0;
 
+uint8_t sync_buffer[3]={0xAA, 0xBB, 0xCC};
+uint8_t current_camera = CAMERA_1;
+
 unsigned char txComplete = 0;
 unsigned char btnState = 0;
 unsigned char dcmiErrorFlag = 0;
@@ -63,15 +66,6 @@ void my_button_cb(void) {
         }
     } else if(btnState == 1) {
         btnState = 0;
-        // if(capture_mode == CAPTURE_ONE_SHOT) {
-        //     txComplete = 1;
-        // } else {
-        //     if(dcmiStopStream(&DCMID) == MSG_OK) {
-        //         txComplete = 1;
-        //     } else {
-        //         dcmiErrorFlag = 1;
-        //     }
-        // }
     }
 }
 
@@ -151,6 +145,7 @@ int main(void)
 
     /* Configure PO8030 camera. */
     po8030_init();
+    select_camera(CAMERA_1);
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
@@ -158,10 +153,21 @@ int main(void)
     po8030_save_current_format(FORMAT_YYYY);
     po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
     po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
+
+    select_camera(CAMERA_2);
+    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
+        dcmiErrorFlag = 1;
+    }
+
+    po8030_save_current_format(FORMAT_YYYY);
+    po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
+    po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
+
     uint32_t image_size = po8030_get_image_size();
     sample_buffer = (uint8_t*)malloc(image_size);
     dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
 
+    select_camera(CAMERA_1);
     /* Infinite loop. */
     while (1) {
         chThdSleepMilliseconds(500);
@@ -184,7 +190,9 @@ int main(void)
             palClearPad(GPIOD, 13) ; // Orange.
 
             if(capture_mode == CAPTURE_ONE_SHOT) {
+            	chnWrite((BaseSequentialStream *)&SDU1, sync_buffer, 3);
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
+                toggle_camera();
                 dcmiStartOneShot(&DCMID);
             } else {
                 if(double_buffering == 1) { // Send both images.

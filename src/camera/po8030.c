@@ -3,6 +3,7 @@
 #include "hal.h"
 #include "usbcfg.h"
 #include "chprintf.h"
+#include "main.h"
 
 i2cflags_t errors = 0;
 static struct po8030_configuration po8030_conf;
@@ -42,13 +43,19 @@ int8_t read_reg(uint8_t addr, uint8_t reg, uint8_t *value) {
 	systime_t timeout = MS2ST(4); // 4 ms
 	uint8_t txbuf[1] = {reg};
 	uint8_t rxbuf[1];
+    I2CDriver * I2C = NULL;
 
-	i2cAcquireBus(&I2CD1);
-	msg_t status = i2cMasterTransmitTimeout(&I2CD1, addr, txbuf, 1, rxbuf, 1, timeout);
-	i2cReleaseBus(&I2CD1);
+    if(current_camera == CAMERA_1){
+        I2C = &I2CD1;
+    }else{
+        I2C = &I2CD3;
+    }
+	i2cAcquireBus(I2C);
+	msg_t status = i2cMasterTransmitTimeout(I2C, addr, txbuf, 1, rxbuf, 1, timeout);
+	i2cReleaseBus(I2C);
 
 	if (status != MSG_OK){
-        errors = i2cGetErrors(&I2CD1);
+        errors = i2cGetErrors(I2C);
 		return status;
 	}
 
@@ -62,13 +69,19 @@ int8_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
 	systime_t timeout = MS2ST(4); // 4 ms
 	uint8_t txbuf[2] = {reg, value};
 	uint8_t rxbuf[1];
-
-	i2cAcquireBus(&I2CD1);
-	msg_t status = i2cMasterTransmitTimeout(&I2CD1, addr, txbuf, 2, rxbuf, 0, timeout);
-	i2cReleaseBus(&I2CD1);
+    I2CDriver * I2C = NULL;
+    
+    if(current_camera == CAMERA_1){
+        I2C = &I2CD1;
+    }else{
+        I2C = &I2CD3;
+    }
+	i2cAcquireBus(I2C);
+	msg_t status = i2cMasterTransmitTimeout(I2C, addr, txbuf, 2, rxbuf, 0, timeout);
+	i2cReleaseBus(I2C);
 
 	if (status != MSG_OK){
-        errors = i2cGetErrors(&I2CD1);
+        errors = i2cGetErrors(I2C);
 		return status;
 	}
 
@@ -77,15 +90,17 @@ int8_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
 
 void po8030_init(void) {
 
+    //we don't want to have the cameras in standby
+    //the PO8030d is in Hi-Z at startup
     palWritePad(GPIOD, GPIOD_StandBy_1, PAL_LOW);
-
+    palWritePad(GPIOE, GPIOE_StandBy_2, PAL_LOW);
     /*
      * PWM configuration structure.
      * Cyclic callback enabled, channels 1 and 4 enabled without callbacks,
      * the active state is a logic one.
      */
     static const PWMConfig pwmcfg = {
-        168000000,                                   /* 16M8Hz PWM timer frequency.  */
+        168000000,                                   /* 168MHz PWM timer frequency.  */
         8,                                      /* PWM frequency = 168/8 = 21MHz.    */
         NULL,
         {
@@ -100,9 +115,10 @@ void po8030_init(void) {
     };
 
     pwmStart(&PWMD1, &pwmcfg);
-    //set duty cycle to 50% 8 (second argument of pwmcfg)
+    //set duty cycle to 50% of 8 (second argument of pwmcfg)
     pwmEnableChannel(&PWMD1, 0, (pwmcnt_t) 4);
 
+    //config for I2C1
     static const I2CConfig i2cfg1 = {
         OPMODE_I2C,
         400000,
@@ -110,12 +126,29 @@ void po8030_init(void) {
     };
     i2cStart(&I2CD1, &i2cfg1);
 
+    //config for I2C3
+    static const I2CConfig i2cfg3 = {
+        OPMODE_I2C,
+        400000,
+        FAST_DUTY_CYCLE_2,
+    };
+    i2cStart(&I2CD3, &i2cfg3);
+
     // Keep reset pin low for at least 8 x MCLK cycles...100 ms is more than enough.
     palWritePad(GPIOE, GPIOE_Reset_1, PAL_HIGH);
     chThdSleepMilliseconds(10);
     palWritePad(GPIOE, GPIOE_Reset_1, PAL_LOW);
     chThdSleepMilliseconds(100);
     palWritePad(GPIOE, GPIOE_Reset_1, PAL_HIGH);
+    //need to wait for the reset signal to go high
+    chThdSleepMilliseconds(100);
+
+    // Keep reset pin low for at least 8 x MCLK cycles...100 ms is more than enough.
+    palWritePad(GPIOD, GPIOD_Reset_2, PAL_HIGH);
+    chThdSleepMilliseconds(10);
+    palWritePad(GPIOD, GPIOD_Reset_2, PAL_LOW);
+    chThdSleepMilliseconds(100);
+    palWritePad(GPIOD, GPIOD_Reset_2, PAL_HIGH);
     //need to wait for the reset signal to go high
     chThdSleepMilliseconds(100);
 
@@ -571,7 +604,7 @@ int8_t po8030_config(format_t fmt, image_size_t imgsize) {
     if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
         return err;
     }
-    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, 0x00)) != MSG_OK) {
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_MODE)) != MSG_OK) {
         return err;
     }
 
@@ -680,7 +713,7 @@ int8_t po8030_advanced_config(format_t fmt, unsigned int x1, unsigned int y1, un
     if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
         return err;
     }
-    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, 0x00)) != MSG_OK) {
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_MODE)) != MSG_OK) {
         return err;
     }
 
@@ -967,6 +1000,39 @@ uint32_t po8030_get_image_size(void) {
 	} else {
 		return (uint32_t)po8030_conf.width * (uint32_t)po8030_conf.height * 2;
 	}
+}
+
+void select_camera(uint8_t camera){
+    if(camera == CAMERA_1){
+
+        current_camera = CAMERA_2;
+        po8030_set_bank(BANK_A);
+        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, O8030_HI_Z_ACTIVATED);
+        //wait for the camera to enter into HI-Z mode
+        chThdSleepMilliseconds(10);
+        current_camera = CAMERA_1;
+        po8030_set_bank(BANK_A);
+        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_DESACTIVATED);
+    }else if(camera == CAMERA_2){
+
+        current_camera = CAMERA_1;
+        po8030_set_bank(BANK_A);
+        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_ACTIVATED);
+        //wait for the camera to enter into HI-Z mode
+        chThdSleepMilliseconds(10);
+        current_camera = CAMERA_2;
+        po8030_set_bank(BANK_A);
+        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_DESACTIVATED);
+
+    }
+}
+
+void toggle_camera(void){
+    if(current_camera == CAMERA_1){
+        select_camera(CAMERA_2);
+    }else if(current_camera == CAMERA_2){
+        select_camera(CAMERA_1);
+    }
 }
 
 

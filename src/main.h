@@ -12,11 +12,16 @@ extern parameter_namespace_t parameter_root;
 #define MAX_BUFF_SIZE 76800 // Bytes.
 #define CAPTURE_ONE_SHOT 0
 #define CAPTURE_CONTINUOUS 1
+#define CAMERA_1 1
+#define CAMERA_2 2
+
 extern const DCMIConfig dcmicfg;
 extern uint8_t capture_mode;
 extern uint8_t *sample_buffer;
 extern uint8_t *sample_buffer2;
 extern uint8_t double_buffering;
+
+extern uint8_t current_camera;
 
 #ifdef __cplusplus
 }
