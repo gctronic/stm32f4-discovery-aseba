@@ -67,6 +67,8 @@
 static unsigned int width = 160;
 static unsigned int height = 120;
 static unsigned char jpegQuality = 70;
+static char* jpegFilename1 = NULL;
+static char* jpegFilename2 = NULL;
 static char* jpegFilename = NULL;
 int input_format=0;
 
@@ -77,7 +79,7 @@ int num_bytes=0;
 unsigned char tempBuffer[20];
 unsigned char imageBuffer[640*480*2];
 speed_t baud_rate = B115200;
-char *port_name = "/dev/ttyACM1\0";
+char *port_name = "/dev/ttyACM2\0";
 
 void rotateGreyImage(int width, int height, unsigned char *src, unsigned char *dst) {
 	int line, column;
@@ -316,6 +318,7 @@ static void usage(FILE* fp, int argc, char** argv)
 		"-d | --device name   Video device name [/dev/video0]\n"
 		"-h | --help          Print this message\n"
 		"-o | --output        JPEG output filename\n"
+		"-p | --output2        JPEG output filename2\n"
 		"-q | --quality       JPEG quality (0-100)\n"
 		"-m | --mmap          Use memory mapped buffers\n"
 		"-r | --read          Use read() calls\n"
@@ -326,13 +329,14 @@ static void usage(FILE* fp, int argc, char** argv)
 		argv[0]);
 	}
 
-static const char short_options [] = "d:ho:q:mruW:H:f:";
+static const char short_options [] = "d:ho:p:q:mruW:H:f:";
 
 static const struct option
 long_options [] = {
 	{ "device",     required_argument,      NULL,           'd' },
 	{ "help",       no_argument,            NULL,           'h' },
-	{ "output",     required_argument,      NULL,           'o' },
+	{ "output1",     required_argument,      NULL,           'o' },
+	{ "output2",     required_argument,      NULL,           'p' },
 	{ "quality",    required_argument,      NULL,           'q' },
 	{ "width",      required_argument,      NULL,           'W' },
 	{ "height",     required_argument,      NULL,           'H' },
@@ -342,7 +346,9 @@ long_options [] = {
 
 int main(int argc, char **argv)
 {
-    FILE *rawData = fopen("rawData.dat", "wb");
+    FILE *rawData1 = fopen("rawData1.dat", "wb");
+    FILE *rawData2 = fopen("rawData2.dat", "wb");
+    FILE *rawData = NULL;
 
 	for (;;) {
 		int index, c = 0;
@@ -367,7 +373,12 @@ int main(int argc, char **argv)
 
 			case 'o':
 				// set jpeg filename
-				jpegFilename = optarg;
+				jpegFilename1 = optarg;
+				break;
+
+			case 'p':
+				// set jpeg filename
+				jpegFilename2 = optarg;
 				break;
 
 			case 'q':
@@ -385,9 +396,9 @@ int main(int argc, char **argv)
 				height = atoi(optarg);
 				break;
 
-		    	case 'f':   //0=RGB565, 1=YUYV, 2=GREY
-		        	input_format = atoi(optarg);
-		        	break;
+	    	case 'f':   //0=RGB565, 1=YUYV, 2=GREY
+	        	input_format = atoi(optarg);
+	        	break;
 			default:
 				usage(stderr, argc, argv);
 				exit(EXIT_FAILURE);
@@ -395,8 +406,14 @@ int main(int argc, char **argv)
 	}
 
 	// check for need parameters
-	if (!jpegFilename) {
-		fprintf(stderr, "You have to specify JPEG output filename!\n\n");
+	if (!jpegFilename1) {
+		fprintf(stderr, "You have to specify JPEG output1 filename!\n\n");
+		usage(stdout, argc, argv);
+		exit(EXIT_FAILURE);
+	}
+	// check for need parameters
+	if (!jpegFilename2) {
+		fprintf(stderr, "You have to specify JPEG output2 filename!\n\n");
 		usage(stdout, argc, argv);
 		exit(EXIT_FAILURE);
 	}
@@ -409,12 +426,17 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    //while(1) {
-        //if(comm->readData((char*)tempBuffer, 3, 90000) > 0) {
-        //    printf("rx: %x %x %x\r\n", tempBuffer[0], tempBuffer[1], tempBuffer[2]);
+    jpegFilename = jpegFilename1;
+    rawData = rawData1;
+
+    while(1) {
+        if(comm->readData((char*)tempBuffer, 3, 90000) > 0) {
+            //printf("rx: %x %x %x\r\n", tempBuffer[0], tempBuffer[1], tempBuffer[2]);
             //std::cout << "rx: " << std::hex << (int)tempBuffer[0] << std::hex << tempBuffer[1] << std::hex << tempBuffer[2] << std::endl;
-        //    if(tempBuffer[0]==0xAA && tempBuffer[1]==0xBB && tempBuffer[2]==0xCC) {
-         //       std::cout << "synced" << std::endl;
+
+            //Simple filter in order to sync with the beginning of a new image
+            if(tempBuffer[0]==0xAA && tempBuffer[1]==0xBB && tempBuffer[2]==0xCC) {
+                std::cout << "synced" << std::endl;
                 if(input_format == 2) { // grey image
                     unsigned int bytesCount = comm->readData((char*)imageBuffer, width*height, 10000000);
                     std::cout << "image received" << std::endl;
@@ -438,14 +460,22 @@ int main(int argc, char **argv)
                         std::cout << "image not saved" << std::endl;
                     }
                 }
-
-        //    }
-        //}
-
-    //}
+                //switch the file to write to because we want two different images
+                if(jpegFilename == jpegFilename1){
+                	jpegFilename = jpegFilename2;
+                	rawData = rawData2;
+                }
+                else{
+                	jpegFilename = jpegFilename1;
+                	rawData = rawData1;
+                }
+            }
+        }
+    }
 
     comm->disconnect();
-    fclose(rawData);
+    fclose(rawData1);
+    fclose(rawData2);
 	exit(EXIT_SUCCESS);
 
 	return 0;
