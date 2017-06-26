@@ -143,26 +143,28 @@ int main(void)
     /* Start shell on the USB port. */
     shell_start();
 
-    /* Configure PO8030 camera. */
+    /* Init the PO8030 module. Includes the PWM and I2C init */
     po8030_init();
+
+    //Configure the PO8030D n°1
     select_camera(CAMERA_1);
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
-
     po8030_save_current_format(FORMAT_YYYY);
     po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
     po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
 
+    //Configure the PO8030D n°2
     select_camera(CAMERA_2);
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
-
     po8030_save_current_format(FORMAT_YYYY);
     po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
     po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
 
+    //configure the DCMI interface
     uint32_t image_size = po8030_get_image_size();
     sample_buffer = (uint8_t*)malloc(image_size);
     dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
@@ -190,9 +192,13 @@ int main(void)
             palClearPad(GPIOD, 13) ; // Orange.
 
             if(capture_mode == CAPTURE_ONE_SHOT) {
+                //write a sync buffer to indicate the beginning of an image
             	chnWrite((BaseSequentialStream *)&SDU1, sync_buffer, 3);
+                //send the image
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
+                //toggle the camera to use
                 toggle_camera();
+                //start a new aquisition
                 dcmiStartOneShot(&DCMID);
             } else {
                 if(double_buffering == 1) { // Send both images.

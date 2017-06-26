@@ -96,8 +96,10 @@ void po8030_init(void) {
     palWritePad(GPIOE, GPIOE_StandBy_2, PAL_LOW);
     /*
      * PWM configuration structure.
-     * Cyclic callback enabled, channels 1 and 4 enabled without callbacks,
      * the active state is a logic one.
+     * 
+     * The PWM is mapped on the pin PE9 by the board configuration file
+     * It is used to send a 21MHz clock to the cameras, known as Master Clock
      */
     static const PWMConfig pwmcfg = {
         168000000,                                   /* 168MHz PWM timer frequency.  */
@@ -604,7 +606,8 @@ int8_t po8030_config(format_t fmt, image_size_t imgsize) {
     if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
         return err;
     }
-    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_MODE)) != MSG_OK) {
+    //we want to let the Hi-Z activated beacause only select_camera() must change it 
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_ACTIVATED)) != MSG_OK) {
         return err;
     }
 
@@ -713,7 +716,8 @@ int8_t po8030_advanced_config(format_t fmt, unsigned int x1, unsigned int y1, un
     if((err = po8030_set_bank(BANK_A)) != MSG_OK) {
         return err;
     }
-    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_MODE)) != MSG_OK) {
+    //we want to let the Hi-Z activated beacause only select_camera() must change it 
+    if((err = write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_ACTIVATED)) != MSG_OK) {
         return err;
     }
 
@@ -1007,7 +1011,7 @@ void select_camera(uint8_t camera){
 
         current_camera = CAMERA_2;
         po8030_set_bank(BANK_A);
-        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, O8030_HI_Z_ACTIVATED);
+        write_reg(PO8030_ADDR, PO8030_REG_PAD_CONTROL, PO8030_HI_Z_ACTIVATED);
         //wait for the camera to enter into HI-Z mode
         chThdSleepMilliseconds(10);
         current_camera = CAMERA_1;

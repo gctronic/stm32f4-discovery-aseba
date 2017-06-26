@@ -125,8 +125,18 @@ struct po8030_configuration {
 	subsampling_t 	curr_subsampling_y;
 };
 
-
+/**
+ * @brief change the active camera to the specified one
+ * 
+ * @param camera CAMERA_1 or CAMERA_2
+ */
 void select_camera(uint8_t camera);
+
+/**
+ * @brief toggle the active camera to the specified one
+ * 
+ * @param camera CAMERA_1 or CAMERA_2
+ */
 void toggle_camera(void);
 void po8030_init(void);
 int8_t po8030_read_id(uint16_t *id);
