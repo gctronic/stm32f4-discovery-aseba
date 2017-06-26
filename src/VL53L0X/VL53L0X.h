@@ -63,6 +63,11 @@ VL53L0X_Error VL53L0X_getLastMeasure(VL53L0X_Dev_t* device);
  */	
 VL53L0X_Error VL53L0X_stopMeasure(VL53L0X_Dev_t* device);
 
+/**
+ * @brief Init a demo thread which uses the three proximity sensors to
+ * continuoulsy measure the distance and varies the intensity of the leds to 
+ * represent the measured distances.
+ */
 void VL53L0X_init_demo(void);
 
 #endif /* VL53L0X_H*/
