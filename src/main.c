@@ -172,7 +172,7 @@ int main(void)
     select_camera(CAMERA_1);
     /* Infinite loop. */
     while (1) {
-        chThdSleepMilliseconds(500);
+        chThdSleepMilliseconds(1);
 
         // Led toggled to verify main is running and to show DCMI state.
         if(dcmiErrorFlag == 1) {
