@@ -96,7 +96,9 @@ void dcmiObjectInit(DCMIDriver *dcmip) {
  * @api
  */
 void dcmiPrepare(DCMIDriver *dcmip, const DCMIConfig *config, uint32_t transactionSize, void* rxbuf0, void* rxbuf1) {
-	osalDbgCheck((dcmip != NULL) && (config != NULL) && (transactionSize < (65536*4)) && ((transactionSize%4)==0) && (rxbuf0 != NULL));
+	// The maximum number of transactions is 65535, each transaction is 32-bit width.
+	// The "transactionSize" is expressed in bytes thus its maximum value is 65535*4, moreover its value must be a multiple of 4.
+	osalDbgCheck((dcmip != NULL) && (config != NULL) && (transactionSize <= (65535*4)) && ((transactionSize%4)==0) && (rxbuf0 != NULL));
 	osalSysLock();
 	osalDbgAssert((dcmip->state == DCMI_STOP), "invalid state");
 	dcmip->config = config;

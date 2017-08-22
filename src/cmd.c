@@ -393,7 +393,7 @@ static void cmd_cam_set_adv_conf_sub(BaseSequentialStream *chp, int argc, char *
 
     if (argc != 2) {
         chprintf(chp,
-                 "Usage: cam_adv_conf subsampling_x subsampling_y\r\nsubsampling: 1, 2, 4\r\n");
+                 "Usage: cam_adv_conf_sub subsampling_x subsampling_y\r\nsubsampling: 1, 2, 4\r\n");
     } else {
         sx = (uint8_t) atoi(argv[0]);
         sy = (uint8_t) atoi(argv[1]);

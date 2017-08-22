@@ -27,7 +27,7 @@
 #define SPI_COMMAND_SIZE 64
 #define SPI_DATA_HEADER_SIZE 4
 #define SPI_DATA_PAYLOAD_SIZE 4092
-#define SPI_DELAY 400
+#define SPI_DELAY 1200
 
 parameter_namespace_t parameter_root, aseba_ns;
 
@@ -43,6 +43,8 @@ uint8_t dcmiErrorFlag = 0;
 uint8_t spiRxBuff[SPI_COMMAND_SIZE];
 uint8_t spiTxBuff[SPI_COMMAND_SIZE];
 uint8_t spiHeader[SPI_DATA_HEADER_SIZE];
+
+event_source_t ss_event;
 
 void frameEndCb(DCMIDriver* dcmip);
 void dmaTransferEndCb(DCMIDriver* dcmip);
@@ -98,6 +100,7 @@ void frameEndCb(DCMIDriver* dcmip) {
 void dmaTransferEndCb(DCMIDriver* dcmip) {
    (void) dcmip;
     //palTogglePad(GPIOD, 15); // Blue.
+	//osalEventBroadcastFlagsI(&ss_event, 0);
 }
 
 void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err) {
@@ -117,9 +120,19 @@ static THD_FUNCTION(spi_thread, p) {
 	uint32_t i = 0;
 	uint16_t transCount = 0; // image size / SPI_BUFF_LEN
 	uint8_t id = 0;
-	
 	uint16_t checksum = 0;
+	volatile uint32_t delay = 0;	
+	uint16_t packetId = 0;
+	uint16_t numPackets = 0;
+	uint32_t remainingBytes = 0;
+	uint32_t spiDataIndex = 0;	
+	event_listener_t ss_listener;
+	eventmask_t evt;	
 	
+	// Create a fixed command packet content for debugging.
+	// The first two bytes are fixed to 0xAA, 0xBB, this is for synchronization purposes with the ESP32.
+	// The last byte represents the checksum (block check character), this is also used for synchronization purposes.
+	// The command packet content will be ([index]value): [0]0xAA, [1]0xBB, [2]3, [3]4, [4]5, ..., [61]62, [62]63, [63]checksum.
 	spiTxBuff[0] = 0xAA;
 	checksum += spiTxBuff[0];
 	spiTxBuff[1] = 0xBB;
@@ -129,16 +142,9 @@ static THD_FUNCTION(spi_thread, p) {
 		checksum += spiTxBuff[i];
 	}
 	spiTxBuff[SPI_COMMAND_SIZE-1] = checksum&0xFF; // Block check character checksum.
-	
-	
-	volatile uint32_t delay = 0;
-	
-	uint16_t packetId = 0;
-	uint16_t numPackets = 0;
-	uint32_t remainingBytes = 0;
-	uint32_t spiDataIndex = 0;
-	
-	// Create a fixed packet content for debugging.
+
+	// Create a fixed data packet content for debugging.
+	// The data packet content will be: 0, 1, ..., 254, 255, 0, 1, ..., 254, 255, 0, 1, ...
 	sample_buffer = malloc(76800);
 	id = 0;
 	for(i=0; i<76800; i++) {
@@ -148,156 +154,170 @@ static THD_FUNCTION(spi_thread, p) {
 		} else {
 			id++;
 		}
-	}	
-
-/*
-	while(1) {
-		memset(spiRxBuff, 0xFF, SPI_COMMAND_SIZE);	
-		spiSelect(&SPID1);
-		spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
-		//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
-		spiUnselect(&SPID1);
-
-		for(i=0; i<SPI_COMMAND_SIZE; i++) {
-			printf("%d, ", spiRxBuff[i]);
-		}
-		printf("\r\n\n");		
-		
-		chThdSleepMilliseconds(1000);
-		
-	}
-*/
+	}		
 	
+	chEvtRegister(&ss_event, &ss_listener, 0);
+	
+	//dcmiStartOneShot(&DCMID);
+	//chThdSleepMilliseconds(500);
+
 	while (true) {
+	
+		//evt = chEvtWaitAny(ALL_EVENTS);
+		
+		//if (evt & EVENT_MASK(0)) {
 
-		palSetPad(GPIOD, 13) ; // Orange.
-		
-		memset(spiRxBuff, 0x00, SPI_COMMAND_SIZE);	
-		spiSelect(&SPID1);
-		spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
-		//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
-		spiUnselect(&SPID1);
-		
-		// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-		// Probably this pause can be avoided since we loose some time computing the checksum...	
-		for(delay=0; delay<SPI_DELAY; delay++) {
-			__NOP();
-		}
-		
-		// Compute the checksum (block check character) to verify the command is received correctly.
-		// If the command is incorrect, wait for the next command, this is an easy way to synchronize the two chips.
-		checksum = 0;
-		for(i=0; i<SPI_COMMAND_SIZE-1; i++) {
-			checksum += spiRxBuff[i];
-		}
-		checksum = checksum &0xFF;
-		if(checksum != spiRxBuff[SPI_COMMAND_SIZE-1] || spiRxBuff[0]!=0xAA || spiRxBuff[1]!=0xBB) {	
-			continue;
-		}
-		
-		/*
-		spiSelect(&SPID1);
-		spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
-		//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
-		spiUnselect(&SPID1);
-		
-		// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-		// Probably this pause can be avoided since we loose some time computing the checksum...	
-		for(delay=0; delay<SPI_DELAY; delay++) {
-			__NOP();
-		}		
-		*/
-		
-		// Modify the packet content in order to test the exchange of a dynamic payload instead of a fixed one.
-		/*
-		if(spiTxBuff[0] >= SPI_COMMAND_SIZE*0) {
-			for(i=0; i<SPI_COMMAND_SIZE; i++) {
-				spiTxBuff[i] = i;
+			palSetPad(GPIOD, 13) ; // Orange.
+			palSetPad(GPIOD, 15); // Blue.
+			
+			memset(spiRxBuff, 0x00, SPI_COMMAND_SIZE);	
+			spiSelect(&SPID1);
+			//chThdSleepMilliseconds(1);
+			spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
+			//chThdSleepMilliseconds(1);
+			//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
+			spiUnselect(&SPID1);
+			
+			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+			// Probably this pause can be avoided/reduced since we loose some time computing the checksum...	
+			for(delay=0; delay<SPI_DELAY; delay++) {
+				__NOP();
 			}
-		} else {
-			for(i=0; i<SPI_COMMAND_SIZE; i++) {
-				spiTxBuff[i] += SPI_COMMAND_SIZE;
+			
+			// Compute the checksum (block check character) to verify the command is received correctly.
+			// If the command is incorrect, wait for the next command, this is an easy way to synchronize the two chips.
+			checksum = 0;
+			for(i=0; i<SPI_COMMAND_SIZE-1; i++) {
+				checksum += spiRxBuff[i];
+			}
+			checksum = checksum &0xFF;
+			// The checksum coupled with the two fixed bytes increase the probability that the command packet is identified correctly.
+			if(checksum != spiRxBuff[SPI_COMMAND_SIZE-1] || spiRxBuff[0]!=0xAA || spiRxBuff[1]!=0xBB) {	
+				//chprintf((BaseSequentialStream *)&SDU1, "F:%.3d %.3d %.3d %.3d %.3d %.3d %.3d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[2], spiRxBuff[3], spiRxBuff[SPI_COMMAND_SIZE-3], spiRxBuff[SPI_COMMAND_SIZE-2], spiRxBuff[SPI_COMMAND_SIZE-1]);			
+				//chThdSleepMilliseconds(1); // Give time to the ESP32 to be listening.
+				continue;
+			}
+					
+			palClearPad(GPIOD, 15); // Blue.
+			
+			/*
+			spiSelect(&SPID1);
+			spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
+			//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
+			spiUnselect(&SPID1);
+			
+			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+			// Probably this pause can be avoided since we loose some time computing the checksum...	
+			for(delay=0; delay<SPI_DELAY; delay++) {
+				__NOP();
 			}		
-		}
-		*/
-
-		numPackets = 76800/SPI_DATA_PAYLOAD_SIZE;
-		remainingBytes = 76800%SPI_DATA_PAYLOAD_SIZE;
-		spiDataIndex = 0;	
-
-		for(packetId=0; packetId<numPackets; packetId++) {
-			/*
-			spiHeader[0] = packetId&0xFF;
-			spiHeader[1] = packetId>>8;
-			spiHeader[2] = SPI_DATA_PAYLOAD_SIZE&0xFF;
-			spiHeader[3] = SPI_DATA_PAYLOAD_SIZE>>8;
-			
-			spiSelect(&SPID1);
-			spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
-			spiUnselect(&SPID1);
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
-			}			
 			*/
-						
-			spiSelect(&SPID1);
-			spiSend(&SPID1, SPI_DATA_PAYLOAD_SIZE, &sample_buffer[spiDataIndex]);
-			spiUnselect(&SPID1);
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
-			}			
-
-			spiDataIndex += SPI_DATA_PAYLOAD_SIZE;
-		}
-		if(remainingBytes > 0) {
-			/*
-			spiHeader[0] = packetId&0xFF;
-			spiHeader[1] = packetId>>8;
-			spiHeader[2] = remainingBytes&0xFF;
-			spiHeader[3] = remainingBytes>>8;
 			
-			spiSelect(&SPID1);
-			spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
-			spiUnselect(&SPID1);
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
+			// Modify the packet content in order to test the exchange of a dynamic payload instead of a fixed one.
+			/*
+			if(spiTxBuff[0] >= SPI_COMMAND_SIZE*0) {
+				for(i=0; i<SPI_COMMAND_SIZE; i++) {
+					spiTxBuff[i] = i;
+				}
+			} else {
+				for(i=0; i<SPI_COMMAND_SIZE; i++) {
+					spiTxBuff[i] += SPI_COMMAND_SIZE;
+				}		
 			}
 			*/
-						
-			spiSelect(&SPID1);
-			//palSetPad(GPIOD, 15); // Blue.
-			spiSend(&SPID1, remainingBytes, &sample_buffer[spiDataIndex]);
-			//palClearPad(GPIOD, 15); // Blue.
-			spiUnselect(&SPID1);
+
+			numPackets = 76800/SPI_DATA_PAYLOAD_SIZE;
+			remainingBytes = 76800%SPI_DATA_PAYLOAD_SIZE;
+			spiDataIndex = 0;	
+
+			for(packetId=0; packetId<numPackets; packetId++) {
+				/*
+				spiHeader[0] = packetId&0xFF;
+				spiHeader[1] = packetId>>8;
+				spiHeader[2] = SPI_DATA_PAYLOAD_SIZE&0xFF;
+				spiHeader[3] = SPI_DATA_PAYLOAD_SIZE>>8;
+				
+				spiSelect(&SPID1);
+				spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
+				spiUnselect(&SPID1);
+				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+				for(delay=0; delay<SPI_DELAY; delay++) {
+					__NOP();
+				}			
+				*/
+							
+				spiSelect(&SPID1);
+				//chThdSleepMilliseconds(1);
+				spiSend(&SPID1, SPI_DATA_PAYLOAD_SIZE, &sample_buffer[spiDataIndex]);
+				//chThdSleepMilliseconds(1);
+				spiUnselect(&SPID1);
+				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+				for(delay=0; delay<SPI_DELAY; delay++) {
+					__NOP();
+				}			
+
+				spiDataIndex += SPI_DATA_PAYLOAD_SIZE;
+			}
+			if(remainingBytes > 0) {
+				/*
+				spiHeader[0] = packetId&0xFF;
+				spiHeader[1] = packetId>>8;
+				spiHeader[2] = remainingBytes&0xFF;
+				spiHeader[3] = remainingBytes>>8;
+				
+				spiSelect(&SPID1);
+				spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
+				spiUnselect(&SPID1);
+				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+				for(delay=0; delay<SPI_DELAY; delay++) {
+					__NOP();
+				}
+				*/
+							
+				spiSelect(&SPID1);
+				//palSetPad(GPIOD, 15); // Blue.
+				//chThdSleepMilliseconds(1);
+				spiSend(&SPID1, remainingBytes, &sample_buffer[spiDataIndex]);
+				//chThdSleepMilliseconds(1);
+				//palClearPad(GPIOD, 15); // Blue.
+				spiUnselect(&SPID1);
+				
+				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+				for(delay=0; delay<SPI_DELAY; delay++) {
+					__NOP();
+				}
+			}		
 			
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
+			/*
+			for(transCount=0; transCount<76800/SPI_PACKET_SIZE; transCount++) {
+				spiSelect(&SPID1);
+				spiSend(&SPID1, SPI_PACKET_SIZE, &sample_buffer[transCount*SPI_PACKET_SIZE]);
+				spiUnselect(&SPID1);
+				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
+				for(delay=0; delay<SPI_DELAY; delay++) {
+					__NOP();
+				}
 			}
-		}		
+			*/
+			
+			
+			palClearPad(GPIOD, 13) ; // Orange.
+			
+			//chprintf((BaseSequentialStream *)&SDU1, "recv: %d, %d, %d, %d, %d, %d, %d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[2], spiRxBuff[3], spiRxBuff[SPI_COMMAND_SIZE-3], spiRxBuff[SPI_COMMAND_SIZE-2], spiRxBuff[SPI_COMMAND_SIZE-1]);		
+			//chprintf((BaseSequentialStream *)&SDU1, "n=%d, r=%d\r\n", numPackets, remainingBytes);			
+			
+			//chThdSleepMilliseconds(50);
+			//dcmiStartOneShot(&DCMID);
+			//chThdSleepMilliseconds(500);
+			
+		//} // Event handling.
 		
-		/*
-		for(transCount=0; transCount<76800/SPI_PACKET_SIZE; transCount++) {
-			spiSelect(&SPID1);
-			spiSend(&SPID1, SPI_PACKET_SIZE, &sample_buffer[transCount*SPI_PACKET_SIZE]);
-			spiUnselect(&SPID1);
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
-			}
-		}
-		*/
+		//break;
 		
-//		dcmiStartOneShot(&DCMID);
-		
-		
-		palClearPad(GPIOD, 13) ; // Orange.
-		
-		chThdSleepMilliseconds(50);
-	}
+	} // Infinite loop.
+	
+	free(sample_buffer);
+	
 }
 
 int main(void)
@@ -359,7 +379,6 @@ int main(void)
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
-
 	/*
 	capture_mode = CAPTURE_ONE_SHOT;
 	double_buffering = 0;
@@ -368,32 +387,10 @@ int main(void)
 	po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	sample_buffer = (uint8_t*)malloc(po8030_get_image_size());
 	dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
-	palSetPad(GPIOD, 13) ; // Orange.
-	dcmiStartOneShot(&DCMID);
+	//dcmiStartOneShot(&DCMID);
 	*/
 
-	
-	/*
-	* Maximum speed SPI configuration (21MHz, CPHA=0, CPOL=0, MSb first).
-	*/
-	// static const SPIConfig hs_spicfg = {
-		// NULL,
-		// GPIOB,
-		// 12,
-		// 0
-	// };
-	//static const SPIConfig hs_spicfg = {
-	//	NULL,
-	//	GPIOB,
-	//	12,
-	//	SPI_CR1_BR_0 //SPI_CR1_BR_2 | SPI_CR1_BR_1
-	//};
-	//static const SPIConfig hs_spicfg = {
-	//	NULL,
-	//	GPIOB,
-	//	12,
-	//	SPI_CR1_BR_2 | SPI_CR1_BR_1
-	//};
+	osalEventObjectInit(&ss_event);
 	
 	/*
 	* SPI1 maximum speed is 42 MHz, ESP32 supports at most 10MHz, so use a prescaler of 1/8 (84 MHz / 8 = 10.5 MHz).
@@ -404,11 +401,10 @@ int main(void)
 		GPIOA,
 		15,
 		SPI_CR1_BR_1
-	};	
-	
-	//spiAcquireBus(&SPID1);              /* Acquire ownership of the bus.    */		
+		//SPI_CR1_BR_1 | SPI_CR1_BR_0 // 5.25 MHz
+	};		
 	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
-	chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
+	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
 
     /* Infinite loop. */
@@ -429,10 +425,13 @@ int main(void)
 		
         if(txComplete == 1) {
             txComplete = 0;
+			
+			chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 
             //palClearPad(GPIOD, 15); // Blue.
             //palClearPad(GPIOD, 13) ; // Orange.
 
+			/*
             if(capture_mode == CAPTURE_ONE_SHOT) {
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
             } else {
@@ -444,6 +443,7 @@ int main(void)
                     chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
                 }
             }
+			*/
         }
 
     }

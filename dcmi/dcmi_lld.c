@@ -147,7 +147,7 @@ void dcmi_lld_prepare(DCMIDriver *dcmip, uint32_t transactionSize, void* rxbuf0,
 			dmaStreamSetFIFO(dcmip->dmastp, STM32_DMA_FCR_DMDIS); // Direct mode enabled (FIFO disabled).
 			dmaStreamSetMemory0(dcmip->dmastp, rxbuf0);
 			dmaStreamSetMemory1(dcmip->dmastp, rxbuf1);
-			dmaStreamSetTransactionSize(dcmip->dmastp, transactionSize/4);
+			dmaStreamSetTransactionSize(dcmip->dmastp, transactionSize/4); // The DMA transactions are 32-bit width.
 			// If second buffer not given, then turn off double buffering.
 			if(rxbuf1 == NULL) {
 				dcmip->dmamode &= (~STM32_DMA_CR_DBM);
