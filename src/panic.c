@@ -5,10 +5,13 @@ void panic_handler(const char *reason)
 {
     (void)reason;
 
-    palSetPad(GPIOD, GPIOD_LED3);
-    palSetPad(GPIOD, GPIOD_LED4);
-    palSetPad(GPIOD, GPIOD_LED5);
-    palSetPad(GPIOD, GPIOD_LED6);
+	palClearPad(GPIOD, GPIOD_LED1);
+	palClearPad(GPIOD, GPIOD_LED3);
+	palClearPad(GPIOD, GPIOD_LED5);
+	palClearPad(GPIOD, GPIOD_LED7);
+	palClearPad(GPIOD, GPIOD_LED_FRONT);
+	palClearPad(GPIOD, GPIOD_LED_BODY);	
+	
     while (true) {
 
     }

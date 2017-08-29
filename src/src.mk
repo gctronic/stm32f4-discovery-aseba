@@ -3,9 +3,9 @@ INCDIR += src/
 
 
 CSRC += ./src/cmd.c
-CSRC += ./src/discovery_demo/accelerometer.c
-CSRC += ./src/discovery_demo/button.c
-CSRC += ./src/discovery_demo/leds.c
+#CSRC += ./src/discovery_demo/accelerometer.c
+#CSRC += ./src/discovery_demo/button.c
+#CSRC += ./src/discovery_demo/leds.c
 CSRC += ./src/flash/flash.c
 CSRC += ./src/main.c
 CSRC += ./src/memory_protection.c
@@ -21,4 +21,10 @@ CSRC += src/crc/crc32.c
 CSRC += src/parameter/parameter.c
 CSRC += src/parameter/parameter_msgpack.c
 CSRC += src/parameter/parameter_print.c
+CSRC += src/i2c_bus.c
 CSRC += src/camera/po8030.c
+CSRC += src/leds.c
+CSRC += src/utility.c
+CSRC += src/sensors/imu.c
+CSRC += src/sensors/mpu9250.c
+CSRC += src/sensors/proximity.c

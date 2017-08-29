@@ -1,9 +1,9 @@
 #include "po8030.h"
+#include "../i2c_bus.h"
 #include "ch.h"
 #include "usbcfg.h"
 #include "chprintf.h"
 
-i2cflags_t errors = 0;
 static struct po8030_configuration po8030_conf;
 
 /**********************************************************************/
@@ -32,65 +32,6 @@ subsampling_t po8030_get_saved_subsampling_y(void) {
 	return currSubsamplingY;
 }
 /**********************************************************************/
-
-i2cflags_t get_last_i2c_error(void) {
-    return errors;
-}
-
-int8_t read_reg(uint8_t addr, uint8_t reg, uint8_t *value) {
-	systime_t timeout = MS2ST(4); // 4 ms
-	uint8_t txbuf[1] = {reg};
-	uint8_t rxbuf[1];
-
-	i2cAcquireBus(&I2CD1);
-	msg_t status = i2cMasterTransmitTimeout(&I2CD1, addr, txbuf, 1, rxbuf, 1, timeout);
-	i2cReleaseBus(&I2CD1);
-
-	if (status != MSG_OK){
-        errors = i2cGetErrors(&I2CD1);
-		return status;
-	}
-
-	*value = rxbuf[0];
-
-    return MSG_OK;
-}
-
-
-int8_t write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
-	systime_t timeout = MS2ST(4); // 4 ms
-	uint8_t txbuf[2] = {reg, value};
-	uint8_t rxbuf[1];
-
-	i2cAcquireBus(&I2CD1);
-	msg_t status = i2cMasterTransmitTimeout(&I2CD1, addr, txbuf, 2, rxbuf, 0, timeout);
-	i2cReleaseBus(&I2CD1);
-
-	if (status != MSG_OK){
-        errors = i2cGetErrors(&I2CD1);
-		return status;
-	}
-
-    return MSG_OK;
-}
-
-void po8030_init(void) {
-
-    static const I2CConfig i2cfg1 = {
-        OPMODE_I2C,
-        400000,
-        FAST_DUTY_CYCLE_2,
-    };
-    i2cStart(&I2CD1, &i2cfg1);
-
-    // Keep reset pin low for at least 8 x MCLK cycles...100 ms is more than enough.
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_HIGH);
-    chThdSleepMilliseconds(10);
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_LOW);
-    chThdSleepMilliseconds(100);
-    palWritePad(GPIOC, GPIOC_CAM_RST, PAL_HIGH);
-
-}
 
 int8_t po8030_read_id(uint16_t *id) {
     uint8_t regValue[2] = {0};

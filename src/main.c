@@ -11,8 +11,8 @@
 #include "main.h"
 #include "config_flash_storage.h"
 
-#include "discovery_demo/accelerometer.h"
-#include "discovery_demo/leds.h"
+//#include "discovery_demo/accelerometer.h"
+//#include "discovery_demo/leds.h"
 #include "discovery_demo/button.h"
 
 //#include "aseba_vm/aseba_node.h"
@@ -21,6 +21,12 @@
 //#include "aseba_vm/aseba_bridge.h"
 
 #include "camera/po8030.h"
+#include "leds.h"
+#include "utility.h"
+#include "sensors/imu.h"
+#include "sensors/mpu9250.h"
+#include "i2c.h"
+#include "sensors/proximity.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -320,6 +326,10 @@ static THD_FUNCTION(spi_thread, p) {
 	
 }
 
+void adc_start(void) {
+    adcStart(&ADCD2, NULL);
+}
+
 int main(void)
 {
 
@@ -329,20 +339,16 @@ int main(void)
 
     parameter_namespace_declare(&parameter_root, NULL, NULL);
 
-
-    // UART2 on PA2(TX) and PA3(RX)
-    sdStart(&SD2, NULL);
-    palSetPadMode(GPIOA, 2, PAL_MODE_ALTERNATE(7));
-    palSetPadMode(GPIOA, 3, PAL_MODE_ALTERNATE(7));
-
-    // serial-over-USB CDC driver.
-    sduObjectInit(&SDU1);
-    sduStart(&SDU1, &serusbcfg);
-    usbDisconnectBus(serusbcfg.usbp);
-    chThdSleepMilliseconds(1000);
-    usbStart(serusbcfg.usbp, &usbcfg);
-    usbConnectBus(serusbcfg.usbp);
-
+	sdStart(&SD3, NULL); // UART3.
+	usb_start();
+	i2c_start();
+	e_led_clear();
+	e_set_body_led(0);
+	e_set_front_led(0);
+	imu_start();
+	adc_start();
+	proximity_start();
+	
 
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
@@ -356,26 +362,27 @@ int main(void)
     //aseba_vm_init();
     //aseba_can_start(&vmState);
 
+	// Needed?? No button available directly on the STM32F407, "user button" connected to ESP32...
+	// PA0 is free anyway...
     /* If button is pressed, start in translator mode. */
-    if (palReadPad(GPIOA, GPIOA_BUTTON)) {
-        //aseba_bridge((BaseSequentialStream *)&SDU1);
-        while (true) {
-            chThdSleepMilliseconds(100);
-        }
-    } else {
+//    if (palReadPad(GPIOA, GPIOA_BUTTON)) {
+//        //aseba_bridge((BaseSequentialStream *)&SDU1);
+//        while (true) {
+//            chThdSleepMilliseconds(100);
+//        }
+//    } else {
         // Initialise Discovery board demo setup
         //demo_led_init();
         //aseba_vm_start();
-    }
+//    }
 
     //demo_acc_start(accelerometer_cb);
-    demo_button_start(my_button_cb);
+    //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    //shell_start();
+    shell_start();
 
     /* Configure PO8030 camera. */
-    po8030_init();
     if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
         dcmiErrorFlag = 1;
     }
@@ -406,18 +413,90 @@ int main(void)
 	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
-
+	
+	int16_t gyro[3];
+	int16_t acc[3];
+	
+	uint16_t prox0Ambient = 0;
+	uint16_t prox0Reflected = 0;
+	uint16_t prox0Delta = 0;
+	
     /* Infinite loop. */
     while (1) {
-        chThdSleepMilliseconds(500);
-
+        chThdSleepMilliseconds(500);		
+	
+		switch(getselector()) {
+			case 0:
+				mpu9250_read_gyro_raw(&gyro);
+				chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", gyro[0], gyro[1], gyro[2]);
+				break;
+				
+			case 1:
+				mpu9250_read_acc_raw(&acc);
+				chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", acc[0], acc[1], acc[2]);
+				break;
+				
+			case 2:
+				e_set_led(0, 2);
+				e_set_led(1, 2);
+				e_set_led(2, 2);
+				e_set_led(3, 2);
+				e_set_body_led(2);
+				e_set_front_led(2);
+				break;
+				
+			case 3:
+				getProx0(&prox0Ambient, &prox0Reflected, &prox0Delta);
+				chprintf((BaseSequentialStream *)&SDU1, "prox0: amb=%d, ref=%d, delta=%d\r\n", prox0Ambient, prox0Reflected, prox0Delta);
+				break;
+				
+			case 4:
+				break;
+				
+			case 5:
+				break;
+				
+			case 6:
+				break;
+				
+			case 7:
+				break;
+				
+			case 8:
+				break;
+				
+			case 9:
+				break;
+				
+			case 10:
+				break;
+				
+			case 11:
+				break;
+				
+			case 12:
+				break;
+				
+			case 13:
+				break;
+				
+			case 14:
+				break;
+				
+			case 15:
+				break;				
+		}
+		
+		//e_set_body_led(2);
+		//e_set_front_led(2);
+		
         // Led toggled to verify main is running and to show DCMI state.
         if(dcmiErrorFlag == 1) {
-            palClearPad(GPIOD, 12); // Green.
-            palTogglePad(GPIOD, 14); // Red.
+			//e_set_led(0, 0);
+			//e_set_led(2, 2);
         } else {
-            palClearPad(GPIOD, 14); // Red.
-            palTogglePad(GPIOD, 12); // Green.
+			//e_set_led(0, 2);
+			//e_set_led(2, 0);
         }
 
         //chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", dmaStreamGetTransactionSize(DCMID.dmastp));
@@ -426,12 +505,14 @@ int main(void)
         if(txComplete == 1) {
             txComplete = 0;
 			
-			chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
+			chThdSleepMilliseconds(5000);
+			
+			//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 
             //palClearPad(GPIOD, 15); // Blue.
             //palClearPad(GPIOD, 13) ; // Orange.
 
-			/*
+			
             if(capture_mode == CAPTURE_ONE_SHOT) {
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
             } else {
@@ -443,7 +524,7 @@ int main(void)
                     chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
                 }
             }
-			*/
+			
         }
 
     }

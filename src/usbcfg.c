@@ -322,3 +322,21 @@ const SerialUSBConfig serusbcfg = {
     USBD1_DATA_AVAILABLE_EP,
     USBD1_INTERRUPT_REQUEST_EP
 };
+
+void usb_start(void)
+{
+    sduObjectInit(&SDU1);
+    sduStart(&SDU1, &serusbcfg);
+
+    /*
+     * Activates the USB driver and then the USB bus pull-up on D+.
+     * Note, a delay is inserted in order to not have to disconnect the cable
+     * after a reset.
+     */
+    usbDisconnectBus(serusbcfg.usbp);
+    chThdSleepMilliseconds(1000);
+    usbStart(serusbcfg.usbp, &usbcfg);
+    usbConnectBus(serusbcfg.usbp);
+
+}
+

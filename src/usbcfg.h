@@ -21,6 +21,9 @@ extern const USBConfig usbcfg;
 extern SerialUSBConfig serusbcfg;
 extern SerialUSBDriver SDU1;
 
+/* Starts the UART over USB service. */
+void usb_start(void);
+
 #endif  /* _USBCFG_H_ */
 
 /** @} */

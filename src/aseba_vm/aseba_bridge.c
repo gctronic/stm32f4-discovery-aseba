@@ -67,7 +67,7 @@ static void aseba_bridge_can_to_uart(void *p)
                                   &source.u16);
 
         if (length.u16 > 0) {
-            palTogglePad(GPIOD, GPIOD_LED4);
+            palTogglePad(GPIOD, GPIOD_LED1);
             /* Aseba transmits length minus the type. */
             length.u16 -= 2;
 
@@ -83,9 +83,9 @@ static void led_thread(void *p)
 {
     (void) p;
     while (true) {
-        palSetPad(GPIOD, GPIOD_LED6);
+        palSetPad(GPIOD, GPIOD_LED1);
         chThdSleepMilliseconds(300);
-        palClearPad(GPIOD, GPIOD_LED6);
+        palClearPad(GPIOD, GPIOD_LED1);
         chThdSleepMilliseconds(300);
     }
 }

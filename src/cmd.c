@@ -13,6 +13,7 @@
 #include "main.h"
 #include "config_flash_storage.h"
 #include "camera/po8030.h"
+#include "leds.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
@@ -442,7 +443,7 @@ static void cmd_cam_set_adv_conf_win(BaseSequentialStream *chp, int argc, char *
         fmt = po8030_get_saved_format();
         subx = po8030_get_saved_subsampling_x();
         suby = po8030_get_saved_subsampling_y();
-
+				
         err = po8030_advanced_config(fmt, x1, y1, width, height, subx, suby);
         if(err != MSG_OK) {
             chprintf(chp, "Cannot set configuration (%d)\r\n", err);
@@ -634,6 +635,59 @@ static void cmd_cam_dcmi_unprepare(BaseSequentialStream *chp, int argc, char **a
 
 }
 
+static void cmd_cam_capture(BaseSequentialStream *chp, int argc, char **argv)
+{
+    (void) argc;
+    (void) argv;
+
+	if(capture_mode == CAPTURE_ONE_SHOT) {
+		dcmiStartOneShot(&DCMID);
+	} else {
+		dcmiStartStream(&DCMID);
+	}
+
+}
+
+static void cmd_cam_send(BaseSequentialStream *chp, int argc, char **argv)
+{
+    (void) argc;
+    (void) argv;
+
+	if(capture_mode == CAPTURE_ONE_SHOT) {
+		txComplete = 1;
+		chprintf(chp, "The image will be sent within 5 seconds\r\n");
+	} else {
+		if(dcmiStopStream(&DCMID) == MSG_OK) {
+			txComplete = 1;
+			chprintf(chp, "The image will be sent within 5 seconds\r\n");
+		} else {
+			chprintf(chp, "DCMI stop stream error\r\n");
+		}
+	}
+
+}
+
+static void cmd_set_led(BaseSequentialStream *chp, int argc, char **argv)
+{
+    uint8_t led_num = 0;
+	uint8_t led_value = 0;
+
+    if (argc != 2) {
+        chprintf(chp, "Usage: set_led led_num led_value\r\nled_num: 0-3=small leds, 4=body led, 5=front led\r\nvalue: 0=off, 1=on, 2=toggle\r\n");
+    } else {
+        led_num = (uint8_t) atoi(argv[0]);
+        led_value = (uint8_t) atoi(argv[1]);
+		
+		if(led_num <= 3) {
+			e_set_led(led_num, led_value);
+		} else if(led_num == 4) {
+			e_set_body_led(led_value);
+		} else if(led_num == 5) {
+			e_set_front_led(led_value);
+		}
+    }
+}
+
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
@@ -658,6 +712,9 @@ const ShellCommand shell_commands[] = {
     {"cam_exposure", cmd_cam_set_exposure},
     {"cam_dcmi_prepare", cmd_cam_dcmi_prepare},
     {"cam_dcmi_unprepare", cmd_cam_dcmi_unprepare},
+	{"cam_capture", cmd_cam_capture},
+	{"cam_send", cmd_cam_send},
+	{"set_led", cmd_set_led},
     {NULL, NULL}
 };
 
