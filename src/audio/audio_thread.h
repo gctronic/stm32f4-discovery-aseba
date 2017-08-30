@@ -1,0 +1,16 @@
+#ifndef AUDIO_THREAD_H
+#define AUDIO_THREAD_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void audio_start(uint16_t freq);
+void dac_start(void);
+void dac_play(uint16_t freq);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

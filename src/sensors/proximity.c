@@ -8,12 +8,12 @@
 #include "main.h"
 #include "../leds.h"
 
-#define PWM_CLK_FREQ 42000000
-#define PWM_FREQUENCY 1000
+#define PWM_CLK_FREQ 1000000
+#define PWM_FREQUENCY 100
 #define PWM_CYCLE (PWM_CLK_FREQ / PWM_FREQUENCY)
 /* Max duty cycle is 0.071, 2x safety margin. */
-#define TCRT1000_DC 0.03
-#define ON_MEASUREMENT_POS 0.02
+#define TCRT1000_DC 0.030
+#define ON_MEASUREMENT_POS 0.028
 #define OFF_MEASUREMENT_POS 0.5
 #define NUM_IR_SENSORS 8
 
@@ -165,9 +165,6 @@ static THD_FUNCTION(proximity_thd, arg)
 static void pwm_reset_cb(PWMDriver *pwmp) {
 	(void)pwmp;
 	palSetPad(GPIOB, GPIOB_PULSE_0);
-	//e_set_body_led(2);
-	//e_set_led(3, 2);
-	//e_set_led(0, 1);
 }
 
 static void pwm_ch2_cb(PWMDriver *pwmp) {
@@ -176,7 +173,6 @@ static void pwm_ch2_cb(PWMDriver *pwmp) {
 	palClearPad(GPIOB, GPIOB_PULSE_1);
 	palClearPad(GPIOE, GPIOE_PULSE_2);
 	palClearPad(GPIOE, GPIOE_PULSE_3);
-	//e_set_led(0, 0);
 }
 
 void getProx0(uint16_t *ambient, uint16_t *reflected, uint16_t *delta) {
@@ -225,7 +221,7 @@ void proximity_start(void)
     pwmStart(&PWMD8, &pwmcfg_proximity);
 
     /* Set duty cycle for TCRT1000 drivers. */
-    pwmEnableChannel(&PWMD8, 1, (pwmcnt_t) (PWM_CYCLE * TCRT1000_DC));
+    pwmEnableChannel(&PWMD8, 1, (pwmcnt_t) (PWM_CYCLE * TCRT1000_DC));	
 	pwmEnableChannelNotification(&PWMD8, 1);
     pwmEnablePeriodicNotification(&PWMD8);
 	

@@ -28,3 +28,13 @@ CSRC += src/utility.c
 CSRC += src/sensors/imu.c
 CSRC += src/sensors/mpu9250.c
 CSRC += src/sensors/proximity.c
+CSRC += src/audio/audio_thread.c
+CSRC += src/sensors/VL53L0X/VL53L0X.c
+CSRC += src/sensors/VL53L0X/Api/core/src/vl53l0x_api.c
+CSRC += src/sensors/VL53L0X/Api/core/src/vl53l0x_api_calibration.c
+CSRC += src/sensors/VL53L0X/Api/core/src/vl53l0x_api_core.c
+CSRC += src/sensors/VL53L0X/Api/core/src/vl53l0x_api_ranging.c
+CSRC += src/sensors/VL53L0X/Api/core/src/vl53l0x_api_strings.c
+CSRC += src/sensors/VL53L0X/Api/platform/src/vl53l0x_i2c_platform.c
+CSRC += src/sensors/VL53L0X/Api/platform/src/vl53l0x_platform.c
+

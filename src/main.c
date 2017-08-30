@@ -25,8 +25,10 @@
 #include "utility.h"
 #include "sensors/imu.h"
 #include "sensors/mpu9250.h"
-#include "i2c.h"
+#include "i2c_bus.h"
 #include "sensors/proximity.h"
+#include "audio/audio_thread.h"
+#include "sensors/VL53L0X/VL53L0X.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -124,7 +126,7 @@ static THD_FUNCTION(spi_thread, p) {
 	(void)p;
 	chRegSetThreadName("SPI thread");
 	uint32_t i = 0;
-	uint16_t transCount = 0; // image size / SPI_BUFF_LEN
+	//uint16_t transCount = 0; // image size / SPI_BUFF_LEN
 	uint8_t id = 0;
 	uint16_t checksum = 0;
 	volatile uint32_t delay = 0;	
@@ -133,7 +135,7 @@ static THD_FUNCTION(spi_thread, p) {
 	uint32_t remainingBytes = 0;
 	uint32_t spiDataIndex = 0;	
 	event_listener_t ss_listener;
-	eventmask_t evt;	
+	//eventmask_t evt;	
 	
 	// Create a fixed command packet content for debugging.
 	// The first two bytes are fixed to 0xAA, 0xBB, this is for synchronization purposes with the ESP32.
@@ -348,8 +350,8 @@ int main(void)
 	imu_start();
 	adc_start();
 	proximity_start();
+	dac_start();	
 	
-
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
     //aseba_declare_parameters(&aseba_ns);
@@ -380,12 +382,12 @@ int main(void)
     //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    shell_start();
+//    shell_start();
 
     /* Configure PO8030 camera. */
-    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
-        dcmiErrorFlag = 1;
-    }
+//    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
+//        dcmiErrorFlag = 1;
+//    }
 	/*
 	capture_mode = CAPTURE_ONE_SHOT;
 	double_buffering = 0;
@@ -397,20 +399,20 @@ int main(void)
 	//dcmiStartOneShot(&DCMID);
 	*/
 
-	osalEventObjectInit(&ss_event);
+//	osalEventObjectInit(&ss_event);
 	
 	/*
 	* SPI1 maximum speed is 42 MHz, ESP32 supports at most 10MHz, so use a prescaler of 1/8 (84 MHz / 8 = 10.5 MHz).
 	* SPI1 configuration (10.5 MHz, CPHA=0, CPOL=0, MSb first).
 	*/	
-	static const SPIConfig hs_spicfg = {
-		NULL,
-		GPIOA,
-		15,
-		SPI_CR1_BR_1
-		//SPI_CR1_BR_1 | SPI_CR1_BR_0 // 5.25 MHz
-	};		
-	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
+//	static const SPIConfig hs_spicfg = {
+//		NULL,
+//		GPIOA,
+//		15,
+//		SPI_CR1_BR_1
+//		//SPI_CR1_BR_1 | SPI_CR1_BR_0 // 5.25 MHz
+//	};		
+//	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
 	
@@ -421,18 +423,21 @@ int main(void)
 	uint16_t prox0Reflected = 0;
 	uint16_t prox0Delta = 0;
 	
+	uint8_t playing = 0;
+	uint8_t tof_measuring = 0;
+	
     /* Infinite loop. */
     while (1) {
         chThdSleepMilliseconds(500);		
 	
 		switch(getselector()) {
 			case 0:
-				mpu9250_read_gyro_raw(&gyro);
+				mpu9250_read_gyro_raw((int16_t *)&gyro);
 				chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", gyro[0], gyro[1], gyro[2]);
 				break;
 				
 			case 1:
-				mpu9250_read_acc_raw(&acc);
+				mpu9250_read_acc_raw((int16_t *)&acc);
 				chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", acc[0], acc[1], acc[2]);
 				break;
 				
@@ -451,15 +456,34 @@ int main(void)
 				break;
 				
 			case 4:
+				if(playing == 0) {
+					//audio_start(200);
+					dac_play(200);
+					playing = 1;
+				}
 				break;
 				
 			case 5:
+				if(playing == 0) {
+					//audio_start(2000);
+					dac_play(2000);
+					playing = 1;
+				}			
 				break;
 				
 			case 6:
+				if(playing == 0) {
+					//audio_start(10000);
+					dac_play(10000);
+					playing = 1;
+				}
 				break;
 				
 			case 7:
+				if(tof_measuring == 0) {
+					tof_measuring = 1;
+					VL53L0X_init_demo();
+				}
 				break;
 				
 			case 8:

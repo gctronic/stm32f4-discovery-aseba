@@ -655,7 +655,7 @@
                                      PIN_PUPDR_PULLDOWN(GPIOD_SEL_3) |		\
                                      PIN_PUPDR_FLOATING(GPIOD_LED1) |		\
                                      PIN_PUPDR_FLOATING(GPIOD_LED3) |       \
-                                     PIN_PUPDR_PULLDOWN(GPIOD_AUDIO_PWR) |	\
+                                     PIN_PUPDR_PULLUP(GPIOD_AUDIO_PWR) |	\
                                      PIN_PUPDR_PULLUP(GPIOD_UART_TX) |		\
                                      PIN_PUPDR_PULLUP(GPIOD_UART_RX) |		\
                                      PIN_PUPDR_FLOATING(GPIOD_LED5) |       \
