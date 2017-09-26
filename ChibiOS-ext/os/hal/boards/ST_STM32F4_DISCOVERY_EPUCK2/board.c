@@ -79,8 +79,7 @@ void __early_init(void) {
 bool sdc_lld_is_card_inserted(SDCDriver *sdcp) {
 
   (void)sdcp;
-  /* TODO: Fill the implementation.*/
-  return true;
+  return !palReadPad(GPIOE, GPIOE_SD_DETECT);;
 }
 
 /**

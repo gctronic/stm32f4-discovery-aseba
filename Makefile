@@ -139,7 +139,6 @@ CSRC += $(STARTUPSRC) \
         $(CHIBIOS)/os/various/shell.c \
         $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
         $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
-        $(CHIBIOS)/os/various/devices_lib/accel/lis302dl.c \
         $(ASEBASRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
@@ -173,7 +172,6 @@ INCDIR += $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
           $(HALINC) $(PLATFORMINC) $(BOARDINC) $(TESTINC) \
           $(CHIBIOS)/os/various \
           $(CHIBIOS)/os/hal/lib/streams \
-          $(CHIBIOS)/os/various/devices_lib/accel \
           $(ASEBAINC) \
 		  src
 

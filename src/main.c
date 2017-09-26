@@ -29,6 +29,10 @@
 #include "sensors/proximity.h"
 #include "audio/audio_thread.h"
 #include "sensors/VL53L0X/VL53L0X.h"
+#include "motor.h"
+#include "sdcard.h"
+#include <ff.h>
+#include "diskio.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -332,6 +336,27 @@ void adc_start(void) {
     adcStart(&ADCD2, NULL);
 }
 
+FRESULT open_append(
+	FIL* fp,            // [OUT] File object to create
+	const char* path    // [IN]  File name to be opened
+    )
+{
+	FRESULT fr;
+	
+	chprintf((BaseSequentialStream *)&SDU1, "opening file...\r\n");
+	
+	// Opens an existing file. If not exist, creates a new file.
+	fr = f_open(fp, path, FA_WRITE | FA_OPEN_ALWAYS);
+	if (fr == FR_OK) {
+		// Seek to end of the file to append data
+		fr = f_lseek(fp, f_size(fp));
+		if (fr != FR_OK) {
+			f_close(fp);
+		}
+	}
+	return fr;
+}
+
 int main(void)
 {
 
@@ -351,6 +376,7 @@ int main(void)
 	adc_start();
 	proximity_start();
 	dac_start();	
+	motors_init();
 	
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
@@ -382,7 +408,7 @@ int main(void)
     //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-//    shell_start();
+    //shell_start();
 
     /* Configure PO8030 camera. */
 //    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
@@ -425,6 +451,16 @@ int main(void)
 	
 	uint8_t playing = 0;
 	uint8_t tof_measuring = 0;
+	
+	uint8_t sdState = 0;
+	FRESULT fr;
+	FIL fil;
+	FATFS fs;           // Filesystem object.
+	BYTE work[1024]; /* Work area (larger is better for processing time) */
+	int rc;
+	DWORD buff[512];  /* 2048 byte working buffer */	
+	
+	chThdSleepMilliseconds(5000);
 	
     /* Infinite loop. */
     while (1) {
@@ -487,12 +523,81 @@ int main(void)
 				break;
 				
 			case 8:
+				motor_set_speed(&right_motor, 1000);
+				motor_set_speed(&left_motor, -1000);
 				break;
 				
 			case 9:
+				//chprintf((BaseSequentialStream *)&SDU1, "sdState=%d\r\n", sdState);
+				switch(sdState) {
+					case 0:
+						palSetPadMode(GPIOC, GPIOC_MIC_SPI3_SCK, PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_PUDR_PULLUP | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_ALTERNATE(12));
+						sdcard_start();
+						sdState = 1;
+						break;
+						
+					case 1:
+						sdcard_automount();
+						sdState = 2;
+						break;
+						
+					case 2:
+						/*
+						chprintf((BaseSequentialStream *)&SDU1, "formatting the micro sd...\r\n");
+						fr = f_mkfs("", 0, 0);
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "f_mkfs err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+						*/
+						
+						/*
+						chprintf((BaseSequentialStream *)&SDU1, "opening file...\r\n");
+						fr = f_open(&fil, "logfile.txt", FA_READ);
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+						*/
+						
+						chprintf((BaseSequentialStream *)&SDU1, "opening file for writing...\r\n");
+						fr = open_append(&fil, "logfile.txt");
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+						
+						/*
+						// Append a line
+						f_printf(&fil, "%02u/%02u/%u, %2u:%02u\n", 31, 8, 2017, 9, 32);
+						
+						// Close the file
+						f_close(&fil);
+						*/
+						sdState = 3;
+						break;
+						
+					case 3:
+						/*
+						sdcard_automount();
+						*/
+						break;
+				}
 				break;
 				
 			case 10:
+				/*
+				// Check function/compatibility of the physical drive #0
+				rc = test_diskio(0, 1, buff, sizeof buff);
+				if (rc) {
+					chprintf((BaseSequentialStream *)&SDU1, "Sorry the function/compatibility test failed.\nFatFs will not work on this disk driver.\n");
+				} else {
+					chprintf((BaseSequentialStream *)&SDU1, "Congratulations! The disk I/O layer works well.\n");
+				}
+				*/
 				break;
 				
 			case 11:

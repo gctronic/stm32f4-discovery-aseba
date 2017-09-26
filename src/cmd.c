@@ -14,6 +14,7 @@
 #include "config_flash_storage.h"
 #include "camera/po8030.h"
 #include "leds.h"
+#include "motor.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
@@ -688,6 +689,22 @@ static void cmd_set_led(BaseSequentialStream *chp, int argc, char **argv)
     }
 }
 
+static void cmd_set_speed(BaseSequentialStream *chp, int argc, char **argv)
+{
+    int16_t speed_left = 0;
+	int16_t speed_right = 0;
+
+    if (argc != 2) {
+        chprintf(chp, "Usage: set_speed left right\r\nspeed: -1200..1200\r\n");
+    } else {
+        speed_left = (int16_t) atoi(argv[0]);
+        speed_right = (int16_t) atoi(argv[1]);
+		chprintf(chp, "lspeed=%d, rspeed=%d\r\n", speed_left, speed_right);
+		motor_set_speed(&right_motor, speed_right);
+		motor_set_speed(&left_motor, speed_left);
+    }
+}
+
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
@@ -715,6 +732,7 @@ const ShellCommand shell_commands[] = {
 	{"cam_capture", cmd_cam_capture},
 	{"cam_send", cmd_cam_send},
 	{"set_led", cmd_set_led},
+	{"set_speed", cmd_set_speed},
     {NULL, NULL}
 };
 

@@ -1,12 +1,25 @@
 dependency-dir: src/
 
+include_directories:
+    - fatfs/src/
+
 depends:
-    - parameter
+    - cmp_mem_access
     - crc
+    - parameter
+    - aseba_vm
     - chibios-syscalls
 
 source:
     - src/config_flash_storage.c
+    - src/sensors/VL53L0X/VL53L0X.c
+    - src/sensors/VL53L0X/Api/core/src/vl53l0x_api.c
+    - src/sensors/VL53L0X/Api/core/src/vl53l0x_api_calibration.c
+    - src/sensors/VL53L0X/Api/core/src/vl53l0x_api_core.c
+    - src/sensors/VL53L0X/Api/core/src/vl53l0x_api_ranging.c
+    - src/sensors/VL53L0X/Api/core/src/vl53l0x_api_strings.c
+    - src/sensors/VL53L0X/Api/platform/src/vl53l0x_i2c_platform.c
+    - src/sensors/VL53L0X/Api/platform/src/vl53l0x_platform.c
 
 tests:
     - tests/config_save_test.cpp
@@ -19,10 +32,19 @@ target.arm:
     - src/usbcfg.c
     - src/memory_protection.c
     - src/flash/flash.c
-    - src/discovery_demo/leds.c
-    - src/discovery_demo/accelerometer.c
-    - src/discovery_demo/button.c
-
+    - src/sensors/imu.c
+    - src/sensors/mpu9250.c
+    - src/sensors/proximity.c
+    - src/motor.c
+    - fatfs/src/ff.c
+    - src/fatfs_diskio.c
+    - src/fatfs_syscall.c
+    - src/sdcard.c
+    - src/audio/audio_thread.c
+    - src/i2c_bus.c
+    - src/camera/po8030.c
+    - src/leds.c
+    - src/utility.c
 
 templates:
     src/src.mk.jinja: src/src.mk

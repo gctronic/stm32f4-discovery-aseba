@@ -726,12 +726,12 @@
                                      PIN_MODE_ALTERNATE(GPIOE_CAM_D7) |		\
                                      PIN_MODE_INPUT(GPIOE_SD_DETECT) |		\
                                      PIN_MODE_OUTPUT(GPIOE_MOT_L_IN2) |		\
-                                     PIN_MODE_ALTERNATE(GPIOE_MOT_L_IN1) |	\
+                                     PIN_MODE_OUTPUT(GPIOE_MOT_L_IN1) |		\
                                      PIN_MODE_OUTPUT(GPIOE_MOT_L_IN4) |		\
-                                     PIN_MODE_ALTERNATE(GPIOE_MOT_L_IN3) |	\
+                                     PIN_MODE_OUTPUT(GPIOE_MOT_L_IN3) |		\
                                      PIN_MODE_OUTPUT(GPIOE_MOT_R_IN2) |		\
-                                     PIN_MODE_ALTERNATE(GPIOE_MOT_R_IN1) |	\
-                                     PIN_MODE_ALTERNATE(GPIOE_MOT_R_IN3) |	\
+                                     PIN_MODE_OUTPUT(GPIOE_MOT_R_IN1) |		\
+                                     PIN_MODE_OUTPUT(GPIOE_MOT_R_IN3) |		\
                                      PIN_MODE_OUTPUT(GPIOE_MOT_R_IN4))
 #define VAL_GPIOE_OTYPER            (PIN_OTYPE_PUSHPULL(GPIOE_CAM_D2) |		\
                                      PIN_OTYPE_PUSHPULL(GPIOE_CAM_D3) |		\
@@ -773,14 +773,14 @@
                                      PIN_PUPDR_PULLUP(GPIOE_CAM_D6) |       \
                                      PIN_PUPDR_PULLUP(GPIOE_CAM_D7) |       \
                                      PIN_PUPDR_PULLUP(GPIOE_SD_DETECT) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_L_IN2) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_L_IN1) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_L_IN4) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_L_IN3) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_R_IN2) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_R_IN1) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_R_IN3) |	\
-                                     PIN_PUPDR_FLOATING(GPIOE_MOT_R_IN4))
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_L_IN2) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_L_IN1) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_L_IN4) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_L_IN3) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_R_IN2) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_R_IN1) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_R_IN3) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOE_MOT_R_IN4))
 #define VAL_GPIOE_ODR               (PIN_ODR_HIGH(GPIOE_CAM_D2) |			\
                                      PIN_ODR_HIGH(GPIOE_CAM_D3) |			\
                                      PIN_ODR_HIGH(GPIOE_PULSE_2) |			\
@@ -806,12 +806,12 @@
                                      PIN_AFIO_AF(GPIOE_CAM_D7, 13) |		\
                                      PIN_AFIO_AF(GPIOE_SD_DETECT, 0))
 #define VAL_GPIOE_AFRH              (PIN_AFIO_AF(GPIOE_MOT_L_IN2, 0) |		\
-                                     PIN_AFIO_AF(GPIOE_MOT_L_IN1, 1) |		\
+                                     PIN_AFIO_AF(GPIOE_MOT_L_IN1, 0) |		\
                                      PIN_AFIO_AF(GPIOE_MOT_L_IN4, 0) |		\
-                                     PIN_AFIO_AF(GPIOE_MOT_L_IN3, 1) |		\
+                                     PIN_AFIO_AF(GPIOE_MOT_L_IN3, 0) |		\
                                      PIN_AFIO_AF(GPIOE_MOT_R_IN2, 0) |		\
-                                     PIN_AFIO_AF(GPIOE_MOT_R_IN1, 1) |		\
-                                     PIN_AFIO_AF(GPIOE_MOT_R_IN3, 1) |		\
+                                     PIN_AFIO_AF(GPIOE_MOT_R_IN1, 0) |		\
+                                     PIN_AFIO_AF(GPIOE_MOT_R_IN3, 0) |		\
                                      PIN_AFIO_AF(GPIOE_MOT_R_IN4, 0))
 
 /*
