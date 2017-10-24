@@ -5,27 +5,52 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "main.h"
+#include "../main.h"
 #include "../leds.h"
 
+// The proximity sensors sampling is designed in order to sample two sensors at one time, the couples are chosen
+// in order to have as less interference as possible and divided as follow:
+// - IR0 (front-right) + IR4 (back-left)
+// - IR1 (front-right-45deg) + IR5 (left)
+// - IR2 (right) + IR6 (front-left-45deg)
+// - IR3 (back-right) + IR7 (front-left)
+// A timer is used to handle the sampling (pwm mode), one channel is used to handle the pulse and a second channel
+// is used to trigger the sampling at the right time.
+// In each pwm period a single couple of sensors is sampled, either with the pulse active to measure the
+// "reflected light" or with the pulse inactive to measure the ambient light; the sequence is:
+// - cycle0: IR0 + IR4 ambient
+// - cycle1: IR0 + IR4 reflected
+// - cycle2: IR1 + IR5 ambient
+// - cycle3: IR1 + IR5 reflected
+// - cycle4: IR2 + IR6 ambient
+// - cycle5: IR2 + IR6 reflected
+// - cycle6: IR3 + IR7 ambient
+// - cycle7: IR3 + IR7 reflected
+// The pwm frequency is 800 Hz, the resulting update frequency for the sensors is 100 Hz (8 cycles to get all the sensors).
+// The pulse is 300 us, the sampling is done at 260 us, this give time to sample both channels when the pulse is still
+// active. Each sampling total time takes about 11.8 us:
+// - ADC clock div = 8 => APB2/8 = 84/8 = 10.5 MHz
+// - [sampling (112 cycles) + conversion (12 cycles)] x 1'000'000/10'500'000 = about 11.81 us
+
 #define PWM_CLK_FREQ 1000000
-#define PWM_FREQUENCY 100
+#define PWM_FREQUENCY 800
 #define PWM_CYCLE (PWM_CLK_FREQ / PWM_FREQUENCY)
 /* Max duty cycle is 0.071, 2x safety margin. */
-#define TCRT1000_DC 0.030
-#define ON_MEASUREMENT_POS 0.028
-#define OFF_MEASUREMENT_POS 0.5
+#define TCRT1000_DC 0.24 // 0.24*1000/PWM_FREQUENCY=0.3 ms
+#define ON_MEASUREMENT_POS 0.208 // 0.208*1000/PWM_FREQUENCY=0.26 ms
+//#define OFF_MEASUREMENT_POS 0.5 // 0.5*1000/PWM_FREQUENCY=1.25 ms
 #define NUM_IR_SENSORS 8
 
 #define PROXIMITY_ADC_SAMPLE_TIME ADC_SAMPLE_112
-#define DMA_BUFFER_SIZE 4
+#define DMA_BUFFER_SIZE 1 // 1 sample for each ADC channel
 
-#define EXTSEL_TIM8_CH1 0x0d
+#define EXTSEL_TIM5_CH1 0x0a
+#define EXTSEL_TIM5_CH3 0x0c
 
-static unsigned int adc2_values[PROXIMITY_NB_CHANNELS] = {0};
+static unsigned int adc2_values[PROXIMITY_NB_CHANNELS*2] = {0};
 static BSEMAPHORE_DECL(adc2_ready, true);
-
-static adcsample_t adc2_proximity_samples[PROXIMITY_NB_CHANNELS * DMA_BUFFER_SIZE];
+static adcsample_t adc2_proximity_samples[PROXIMITY_NB_CHANNELS*2 * DMA_BUFFER_SIZE];
+uint8_t pulseSeqState = 0;
 
 static void adc_cb(ADCDriver *adcp, adcsample_t *samples, size_t n)
 {
@@ -43,35 +68,46 @@ static void adc_cb(ADCDriver *adcp, adcsample_t *samples, size_t n)
     memset(values, 0, adcp->grpp->num_channels * sizeof(unsigned int));
 
     /* Compute the average over the different measurements. */
-    for (size_t j = 0; j < n; j++) {
-        for (size_t i = 0; i < adcp->grpp->num_channels; i++) {
-            values[i] += samples[adcp->grpp->num_channels * j + i];
-        }
-    }
+//    for (size_t j = 0; j < n; j++) {
+//        for (size_t i = 0; i < adcp->grpp->num_channels; i++) {
+//            values[i] += samples[adcp->grpp->num_channels * j + i];
+//        }
+//    }
+//    for (size_t i = 0; i < adcp->grpp->num_channels; i++) {
+//        values[i] /= n;
+//    }
 
+    // Finally only one value is sampled for each channel, so it doens't need anymore to average the measurements.
+    // Thus simply copy the values to the destination buffer.
     for (size_t i = 0; i < adcp->grpp->num_channels; i++) {
-        values[i] /= n;
+    	values[i] = samples[i];
     }
+    //memcpy(values, samples, adcp->grpp->num_channels * sizeof(unsigned int));
 
-    /* Stops the automatic conversions and signal the proximity thread that the
-     * ADC measurements are done. */
+    /* Signal the proximity thread that the ADC measurements are done. */
     chSysLockFromISR();
-    adcStopConversionI(adcp);
     chBSemSignalI(sem);
     chSysUnlockFromISR();
+
+    pulseSeqState = 1; // Sync with the timer since the first time we get here the ADC and timer could be desync.
 }
 
 static const ADCConversionGroup adcgrpcfg2 = {
     .circular = true,
-    .num_channels = PROXIMITY_NB_CHANNELS,
+    .num_channels = PROXIMITY_NB_CHANNELS*2, // Both ambient and reflected measures are saved before raising the DMA interrupt (and call the adc callback).
     .end_cb = adc_cb,
     .error_cb = NULL,
 
-    /* Discontinuous mode with 1 conversion per trigger. */
-    .cr1 = ADC_CR1_DISCEN,
+    // Discontinuous mode with 2 conversions per trigger.
+	// Every time the sampling is triggered by the timer, two channels are sampled:
+	// - trigger1: IR0 + IR4 sampling
+	// - trigger2: IR1 + IR5 sampling
+	// - trigger3: IR2 + IR6 sampling
+	// - trigger4: IR3 + IR7 sampling
+    .cr1 = ADC_CR1_DISCEN | ADC_CR1_DISCNUM_0,
 
-    /* External trigger on timer 8 CC1. */
-    .cr2 = ADC_CR2_EXTEN_1 | ADC_CR2_EXTSEL_SRC(EXTSEL_TIM8_CH1),
+    /* External trigger on timer 5 CC1. */
+    .cr2 = ADC_CR2_EXTEN_1 | ADC_CR2_EXTSEL_SRC(EXTSEL_TIM5_CH1),
 
     /* Sampling duration, all set to PROXIMITY_ADC_SAMPLE_TIME. */
     .smpr2 = ADC_SMPR2_SMP_AN0(PROXIMITY_ADC_SAMPLE_TIME) |
@@ -91,106 +127,125 @@ static const ADCConversionGroup adcgrpcfg2 = {
              ADC_SMPR1_SMP_AN14(PROXIMITY_ADC_SAMPLE_TIME) |
              ADC_SMPR1_SMP_AN15(PROXIMITY_ADC_SAMPLE_TIME),
 
-    /* Channels are defined starting from front (range sensor) and turning
-     * counter clock wise. */
-    /* Proximity sensors channels. */
+    // Channels are defined starting from front-right sensor and turning clock wise.
+	// Proximity sensors channels:
+	// IR0 = ADC123_IN12 (PC2)
+	// IR1 = ADC123_IN13 (PC3)
+	// IR2 = ADC12_IN14 (PC4)
+	// IR3 = ADC12_IN15 (PC5)
+	// IR4 = ADC12_IN9 (PB1)
+	// IR5 = ADC12_IN8 (PB0)
+	// IR6 = ADC123_IN10 (PC0)
+	// IR7 = ADC123_IN11 (PC1)
+	// A single ADC peripheral can be used for all channels => ADC1 or ADC2.
     .sqr3 = ADC_SQR3_SQ1_N(12) |
             ADC_SQR3_SQ2_N(9) |
-            ADC_SQR3_SQ3_N(13) |
-            ADC_SQR3_SQ4_N(8) |
-            ADC_SQR3_SQ5_N(14) |
-            ADC_SQR3_SQ6_N(10),
-    .sqr2 = ADC_SQR2_SQ7_N(9) |
-            ADC_SQR2_SQ8_N(11),
-    .sqr1 = ADC_SQR1_NUM_CH(PROXIMITY_NB_CHANNELS)
+			ADC_SQR3_SQ3_N(12) |
+			ADC_SQR3_SQ4_N(9) |
+            ADC_SQR3_SQ5_N(13) |
+            ADC_SQR3_SQ6_N(8),
+    .sqr2 = ADC_SQR2_SQ7_N(13) |
+            ADC_SQR2_SQ8_N(8) |
+			ADC_SQR2_SQ9_N(14) |
+			ADC_SQR2_SQ10_N(10) |
+			ADC_SQR2_SQ11_N(14) |
+			ADC_SQR2_SQ12_N(10),
+    .sqr1 = ADC_SQR1_SQ13_N(15) |
+			ADC_SQR1_SQ14_N(11) |
+			ADC_SQR1_SQ15_N(15) |
+			ADC_SQR1_SQ16_N(11) |
+			ADC_SQR1_NUM_CH(PROXIMITY_NB_CHANNELS*2)
 };
-
-/** Takes a single measurement on all channels and stores the result in the provided array. */
-static void take_measurement(unsigned int result[PROXIMITY_NB_CHANNELS])
-{
-    int i;
-
-    /* Gets exclusive access to the ADCs. */
-    adcAcquireBus(&ADCD2);
-
-    /* Starts a new conversion. */
-    adcStartConversion(&ADCD2, &adcgrpcfg2, adc2_proximity_samples, DMA_BUFFER_SIZE);
-
-    /* Wait for the conversions to be done. */
-    chBSemWait(&adc2_ready);
-
-    /* Copies the results in the provided arrays. */
-    for (i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-		result[i] = adc2_values[i];
-    }
-
-    /* Gets exclusive access to the ADCs. */
-    adcReleaseBus(&ADCD2);
-}
-
-/** Sets the position in the LED waveform (0..1) at which the measurement will be taken. */
-static void set_measurement_position(float pos)
-{
-    pwmEnableChannel(&PWMD8, 0, (pwmcnt_t) (PWM_CYCLE * pos));
-}
 
 static THD_FUNCTION(proximity_thd, arg)
 {
-/*
     (void) arg;
     chRegSetThreadName(__FUNCTION__);
 
-    // Declares the topic on the bus. 
-    TOPIC_DECL(proximity_topic, proximity_msg_t);
-    messagebus_advertise_topic(&bus, &proximity_topic.topic, "/proximity");
+    messagebus_topic_t proximity_topic;
+
+    MUTEX_DECL(button_topic_lock);
+    CONDVAR_DECL(button_topic_condvar);
+
+    //messagebus_topic_init(&proximity_topic, &button_topic_lock, &button_topic_condvar, NULL, 0);
+    //messagebus_advertise_topic(&bus, &proximity_topic, "/proximity");
 
     while (true) {
-        proximity_msg_t msg;
+    	//proximity_msg_t msg;
 
-        set_measurement_position(OFF_MEASUREMENT_POS);
-        take_measurement(msg.ambient);
+    	chBSemWait(&adc2_ready);
+    	e_set_led(0, 2);
 
-        set_measurement_position(ON_MEASUREMENT_POS);
-        take_measurement(msg.reflected);
+        proxMsg.ambient[0] = adc2_values[0];
+        proxMsg.ambient[1] = adc2_values[4];
+        proxMsg.ambient[2] = adc2_values[8];
+        proxMsg.ambient[3] = adc2_values[12];
+        proxMsg.ambient[4] = adc2_values[1];
+        proxMsg.ambient[5] = adc2_values[5];
+        proxMsg.ambient[6] = adc2_values[9];
+        proxMsg.ambient[7] = adc2_values[13];
+
+        proxMsg.reflected[0] = adc2_values[2];
+        proxMsg.reflected[1] = adc2_values[6];
+        proxMsg.reflected[2] = adc2_values[10];
+        proxMsg.reflected[3] = adc2_values[14];
+        proxMsg.reflected[4] = adc2_values[3];
+        proxMsg.reflected[5] = adc2_values[7];
+        proxMsg.reflected[6] = adc2_values[11];
+        proxMsg.reflected[7] = adc2_values[15];
 
         for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-            msg.delta[i] = msg.reflected[i] - msg.ambient[i];
+        	proxMsg.delta[i] = proxMsg.ambient[i] - proxMsg.reflected[i];
         }
 
-        messagebus_topic_publish(&proximity_topic.topic, &msg, sizeof(msg));
+       // messagebus_topic_publish(&proximity_topic, &proxMsg, sizeof(proxMsg));
+
     }
-*/	
 }
 
 static void pwm_reset_cb(PWMDriver *pwmp) {
 	(void)pwmp;
-	palSetPad(GPIOB, GPIOB_PULSE_0);
+	switch(pulseSeqState) {
+		case 0:
+			break;
+		case 1:
+			pulseSeqState = 2;
+			break;
+		case 2:
+			palSetPad(GPIOB, GPIOB_PULSE_0);
+			pulseSeqState = 3;
+			break;
+		case 3:
+			pulseSeqState = 4;
+			break;
+		case 4:
+			palSetPad(GPIOB, GPIOB_PULSE_1);
+			pulseSeqState = 5;
+			break;
+		case 5:
+			pulseSeqState = 6;
+			break;
+		case 6:
+			palSetPad(GPIOE, GPIOE_PULSE_2);
+			pulseSeqState = 7;
+			break;
+		case 7:
+			pulseSeqState = 8;
+			break;
+		case 8:
+			palSetPad(GPIOE, GPIOE_PULSE_3);
+			pulseSeqState = 1;
+			break;
+	}
 }
 
 static void pwm_ch2_cb(PWMDriver *pwmp) {
 	(void)pwmp;
+	// Clear all the pulse independently of the one that is actually active.
 	palClearPad(GPIOB, GPIOB_PULSE_0);
 	palClearPad(GPIOB, GPIOB_PULSE_1);
 	palClearPad(GPIOE, GPIOE_PULSE_2);
 	palClearPad(GPIOE, GPIOE_PULSE_3);
-}
-
-void getProx0(uint16_t *ambient, uint16_t *reflected, uint16_t *delta) {
-	proximity_msg_t msg;
-	
-	set_measurement_position(OFF_MEASUREMENT_POS);
-	take_measurement(msg.ambient);
-	
-	set_measurement_position(ON_MEASUREMENT_POS);
-	take_measurement(msg.reflected);
-	
-	for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-		msg.delta[i] = msg.ambient[i] - msg.reflected[i];
-	}
-	
-	*ambient = msg.ambient[0];
-	*reflected = msg.reflected[0];
-	*delta = msg.delta[0];
 }
 
 void proximity_start(void)
@@ -206,48 +261,28 @@ void proximity_start(void)
         .dier = TIM_DIER_CC1DE,
         .callback = pwm_reset_cb,
         .channels = {
-            /* Channel 1 is used to generate ADC triggers. It must be in output
-             * mode, although it is not routed to any pin. */
+            // Channel 1 is used to generate ADC trigger for starting sampling for both "pulse active" and ambient measures.
+        	// It must be in output mode, although it is not routed to any pin.
             {.mode = PWM_OUTPUT_ACTIVE_HIGH, .callback = NULL},
-
-            /* Channel 2N is used to generate TCRT1000 drive signals. */
+            /* Channel 2 is used to generate TCRT1000 drive signals. */
             {.mode = PWM_OUTPUT_ACTIVE_HIGH, .callback = pwm_ch2_cb},
             {.mode = PWM_OUTPUT_DISABLED, .callback = NULL},
             {.mode = PWM_OUTPUT_DISABLED, .callback = NULL},
         },
     };
 	
+    adcAcquireBus(&ADCD2);
+    adcStartConversion(&ADCD2, &adcgrpcfg2, adc2_proximity_samples, DMA_BUFFER_SIZE); // ADC waiting for the trigger from the timer.
+
     /* Init PWM */
-    pwmStart(&PWMD8, &pwmcfg_proximity);
+    pwmStart(&PWMD5, &pwmcfg_proximity);
 
-    /* Set duty cycle for TCRT1000 drivers. */
-    pwmEnableChannel(&PWMD8, 1, (pwmcnt_t) (PWM_CYCLE * TCRT1000_DC));	
-	pwmEnableChannelNotification(&PWMD8, 1);
-    pwmEnablePeriodicNotification(&PWMD8);
-	
-    //static THD_WORKING_AREA(proximity_thd_wa, 2048);
-    //chThdCreateStatic(proximity_thd_wa, sizeof(proximity_thd_wa), NORMALPRIO, proximity_thd, NULL);
+    pwmEnableChannel(&PWMD5, 1, (pwmcnt_t) (PWM_CYCLE * TCRT1000_DC)); // Enable channel 2 to set duty cycle for TCRT1000 drivers.
+	pwmEnableChannelNotification(&PWMD5, 1); // Channel 2 interrupt enable to handle pulse shutdown.
+    pwmEnablePeriodicNotification(&PWMD5); // PWM general interrupt at the beginning of the period to handle pulse ignition.
+    pwmEnableChannel(&PWMD5, 0, (pwmcnt_t) (PWM_CYCLE * ON_MEASUREMENT_POS)); // Enable channel 1 to trigger the measures.
 
-/*	
-    static const PWMConfig pwmcfg = {
-        100000,                                   // 100kHz PWM clock frequency.
-        1000,                                      // PWM period is 1000 cycles.
-        pwm_reset_cb,
-        {
-         {PWM_OUTPUT_ACTIVE_HIGH, pwm_ch1_cb},
-         {PWM_OUTPUT_DISABLED, NULL},
-         {PWM_OUTPUT_DISABLED, NULL},
-         {PWM_OUTPUT_DISABLED, NULL}
-		},
-        // HW dependent part.
-        0,
-        0
-    };	
-	
-	pwmStart(&PWMD8, &pwmcfg);
-	pwmEnableChannel(&PWMD8, 0, (pwmcnt_t) 900);
-	pwmEnableChannelNotification(&PWMD8, 0);
-    pwmEnablePeriodicNotification(&PWMD8);
-*/
+    static THD_WORKING_AREA(proximity_thd_wa, 2048);
+    chThdCreateStatic(proximity_thd_wa, sizeof(proximity_thd_wa), NORMALPRIO, proximity_thd, NULL);
 	
 }

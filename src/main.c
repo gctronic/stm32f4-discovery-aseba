@@ -41,6 +41,12 @@
 #define SPI_DATA_PAYLOAD_SIZE 4092
 #define SPI_DELAY 1200
 
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
+
+proximity_msg_t proxMsg;
+
 parameter_namespace_t parameter_root, aseba_ns;
 
 uint8_t capture_mode = CAPTURE_ONE_SHOT;
@@ -364,6 +370,9 @@ int main(void)
     chSysInit();
     mpu_init();
 
+    /** Inits the Inter Process Communication bus. */
+//    messagebus_init(&bus, &bus_lock, &bus_condvar);
+
     parameter_namespace_declare(&parameter_root, NULL, NULL);
 
 	sdStart(&SD3, NULL); // UART3.
@@ -372,7 +381,7 @@ int main(void)
 	e_led_clear();
 	e_set_body_led(0);
 	e_set_front_led(0);
-	imu_start();
+//	imu_start();
 	adc_start();
 	proximity_start();
 	dac_start();	
@@ -460,11 +469,14 @@ int main(void)
 	int rc;
 	DWORD buff[512];  /* 2048 byte working buffer */	
 	
+    //messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
+    //proximity_msg_t proximity;
+
 	chThdSleepMilliseconds(5000);
 	
     /* Infinite loop. */
     while (1) {
-        chThdSleepMilliseconds(500);		
+        chThdSleepMilliseconds(250);
 	
 		switch(getselector()) {
 			case 0:
@@ -487,8 +499,44 @@ int main(void)
 				break;
 				
 			case 3:
-				getProx0(&prox0Ambient, &prox0Reflected, &prox0Delta);
-				chprintf((BaseSequentialStream *)&SDU1, "prox0: amb=%d, ref=%d, delta=%d\r\n", prox0Ambient, prox0Reflected, prox0Delta);
+				// Read proximity sensors.
+		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proxMsg.ambient[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proxMsg.reflected[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proxMsg.delta[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+		        }
+		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d;%.4d;%.4d;", proxMsg.ambient[i], proxMsg.reflected[i], proxMsg.delta[i]);
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+//				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%d,", proximity.delta[i]);
+//		            //proximity.delta[i];
+//		            //proximity.ambient[i];
+//		            //proximity.reflected[i];
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+		        /*
+			    topic = messagebus_find_topic(&bus, "/proximity");
+			    if (topic != NULL) {
+			        messagebus_topic_read(topic, &proximity, sizeof(proximity));
+			        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+			        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.delta[i]);
+			            //proximity.delta[i];
+			            //proximity.ambient[i];
+			            //proximity.reflected[i];
+			        }
+			        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+			    }
+			    */
+				//getProx0(&prox0Ambient, &prox0Reflected, &prox0Delta);
+				//chprintf((BaseSequentialStream *)&SDU1, "prox0: amb=%d, ref=%d, delta=%d\r\n", prox0Ambient, prox0Reflected, prox0Delta);
 				break;
 				
 			case 4:

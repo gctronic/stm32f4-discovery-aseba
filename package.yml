@@ -9,6 +9,7 @@ depends:
     - parameter
     - aseba_vm
     - chibios-syscalls
+    - msgbus
 
 source:
     - src/config_flash_storage.c
