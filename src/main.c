@@ -33,6 +33,7 @@
 #include "sdcard.h"
 #include <ff.h>
 #include "diskio.h"
+#include "Asercom.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -44,8 +45,6 @@
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
-
-proximity_msg_t proxMsg;
 
 parameter_namespace_t parameter_root, aseba_ns;
 
@@ -371,7 +370,7 @@ int main(void)
     mpu_init();
 
     /** Inits the Inter Process Communication bus. */
-//    messagebus_init(&bus, &bus_lock, &bus_condvar);
+    messagebus_init(&bus, &bus_lock, &bus_condvar);
 
     parameter_namespace_declare(&parameter_root, NULL, NULL);
 
@@ -381,7 +380,7 @@ int main(void)
 	e_led_clear();
 	e_set_body_led(0);
 	e_set_front_led(0);
-	imu_start();
+//	imu_start();
 	adc_start();
 	proximity_start();
 	dac_start();	
@@ -453,11 +452,7 @@ int main(void)
 	
 	int16_t gyro[3];
 	int16_t acc[3];
-	
-	uint16_t prox0Ambient = 0;
-	uint16_t prox0Reflected = 0;
-	uint16_t prox0Delta = 0;
-	
+
 	uint8_t playing = 0;
 	uint8_t tof_measuring = 0;
 	
@@ -471,8 +466,8 @@ int main(void)
 	
 	signed int leftSpeed=0, rightSpeed=0;
 
-    //messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
-    //proximity_msg_t proximity;
+    messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
+    proximity_msg_t proximity;
 
 	chThdSleepMilliseconds(5000);
 	
@@ -483,11 +478,17 @@ int main(void)
 		switch(getselector()) {
 			case 0:
 				mpu9250_read_gyro_raw((int16_t *)&gyro);
+				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+					continue;
+				}
 				chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", gyro[0], gyro[1], gyro[2]);
 				break;
 				
 			case 1:
 				mpu9250_read_acc_raw((int16_t *)&acc);
+				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+					continue;
+				}
 				chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", acc[0], acc[1], acc[2]);
 				break;
 				
@@ -502,43 +503,32 @@ int main(void)
 				
 			case 3:
 				// Read proximity sensors.
+				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
+
+				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+					continue;
+				}
+
+				// Sensors info print: each line contains data related to a single sensor.
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.ambient[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.reflected[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proximity.delta[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+				// CSV print: each line contains IR0amb, IR0ref, IR0delta, IR1amb, ..., IR7delta.
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d;%.4d;%.4d;", proximity.ambient[i], proximity.reflected[i], proximity.delta[i]);
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+		        // CSV print: each line contains only delta values for each sensor.
 		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proxMsg.ambient[i]);
-		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proxMsg.reflected[i]);
-		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proxMsg.delta[i]);
-		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
 		        }
 		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-
-//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d;%.4d;%.4d;", proxMsg.ambient[i], proxMsg.reflected[i], proxMsg.delta[i]);
-//		        }
-//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-
-//				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
-//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%d,", proximity.delta[i]);
-//		            //proximity.delta[i];
-//		            //proximity.ambient[i];
-//		            //proximity.reflected[i];
-//		        }
-//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-
-		        /*
-			    topic = messagebus_find_topic(&bus, "/proximity");
-			    if (topic != NULL) {
-			        messagebus_topic_read(topic, &proximity, sizeof(proximity));
-			        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-			        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.delta[i]);
-			            //proximity.delta[i];
-			            //proximity.ambient[i];
-			            //proximity.reflected[i];
-			        }
-			        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-			    }
-			    */
-				//getProx0(&prox0Ambient, &prox0Reflected, &prox0Delta);
-				//chprintf((BaseSequentialStream *)&SDU1, "prox0: amb=%d, ref=%d, delta=%d\r\n", prox0Ambient, prox0Reflected, prox0Delta);
 				break;
 				
 			case 4:
@@ -651,13 +641,15 @@ int main(void)
 				break;
 				
 			case 11:
-				leftSpeed = 2000 - proxMsg.delta[0]*4 - proxMsg.delta[1]*2;
-				rightSpeed = 2000 - proxMsg.delta[7]*4 - proxMsg.delta[6]*2;
+				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
+				leftSpeed = 2000 - proximity.delta[0]*4 - proximity.delta[1]*2;
+				rightSpeed = 2000 - proximity.delta[7]*4 - proximity.delta[6]*2;
 				right_motor_set_speed(rightSpeed);
 				left_motor_set_speed(leftSpeed);
 				break;
 				
 			case 12:
+				run_asercom();
 				break;
 				
 			case 13:

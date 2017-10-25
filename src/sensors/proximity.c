@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "../main.h"
-#include "../leds.h"
 
 // The proximity sensors sampling is designed in order to sample two sensors at one time, the couples are chosen
 // in order to have as less interference as possible and divided as follow:
@@ -162,16 +161,15 @@ static THD_FUNCTION(proximity_thd, arg)
     (void) arg;
     chRegSetThreadName(__FUNCTION__);
 
+    proximity_msg_t proxMsg, proxMsgTopic;
+
     messagebus_topic_t proximity_topic;
-
-    MUTEX_DECL(button_topic_lock);
-    CONDVAR_DECL(button_topic_condvar);
-
-    //messagebus_topic_init(&proximity_topic, &button_topic_lock, &button_topic_condvar, NULL, 0);
-    //messagebus_advertise_topic(&bus, &proximity_topic, "/proximity");
+    MUTEX_DECL(prox_topic_lock);
+    CONDVAR_DECL(prox_topic_condvar);
+    messagebus_topic_init(&proximity_topic, &prox_topic_lock, &prox_topic_condvar, &proxMsgTopic, sizeof(proxMsgTopic));
+    messagebus_advertise_topic(&bus, &proximity_topic, "/proximity");
 
     while (true) {
-    	//proximity_msg_t msg;
 
     	chBSemWait(&adc2_ready);
 
@@ -197,7 +195,7 @@ static THD_FUNCTION(proximity_thd, arg)
         	proxMsg.delta[i] = proxMsg.ambient[i] - proxMsg.reflected[i];
         }
 
-       // messagebus_topic_publish(&proximity_topic, &proxMsg, sizeof(proxMsg));
+        messagebus_topic_publish(&proximity_topic, &proxMsg, sizeof(proxMsg));
 
     }
 }
