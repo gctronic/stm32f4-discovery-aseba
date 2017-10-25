@@ -13,17 +13,18 @@ struct stepper_motor_s {
     uint8_t step_index;
     int32_t count;
     void (*update)(const uint8_t *out);
-    GPTDriver *timer;
+    void (*enable_power_save)(void);
+    void (*disable_power_save)(void);
+    PWMDriver *timer;
 };
 
-extern struct stepper_motor_s right_motor;
-extern struct stepper_motor_s left_motor;
-
 /** Set motor speed in steps per second. */
-void motor_set_speed(struct stepper_motor_s *m, int speed);
+void left_motor_set_speed(int speed);
+void right_motor_set_speed(int speed);
 
 /** Read motor position counter */
-uint32_t motor_get_pos(struct stepper_motor_s *m);
+uint32_t left_motor_get_pos(void);
+uint32_t right_motor_get_pos(void);
 
 /** Initialize motors */
 void motors_init(void);

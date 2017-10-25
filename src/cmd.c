@@ -700,8 +700,8 @@ static void cmd_set_speed(BaseSequentialStream *chp, int argc, char **argv)
         speed_left = (int16_t) atoi(argv[0]);
         speed_right = (int16_t) atoi(argv[1]);
 		chprintf(chp, "lspeed=%d, rspeed=%d\r\n", speed_left, speed_right);
-		motor_set_speed(&right_motor, speed_right);
-		motor_set_speed(&left_motor, speed_left);
+		right_motor_set_speed(speed_right);
+		left_motor_set_speed(speed_left);
     }
 }
 

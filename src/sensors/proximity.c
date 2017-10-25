@@ -174,7 +174,6 @@ static THD_FUNCTION(proximity_thd, arg)
     	//proximity_msg_t msg;
 
     	chBSemWait(&adc2_ready);
-    	e_set_led(0, 2);
 
         proxMsg.ambient[0] = adc2_values[0];
         proxMsg.ambient[1] = adc2_values[4];

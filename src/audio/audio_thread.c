@@ -85,8 +85,8 @@ static void error_cb(DACDriver *dacp, dacerror_t err) {
 
 void dac_start(void) 
 {
-	//palSetPad(GPIOD, GPIOD_AUDIO_PWR);
-	palClearPad(GPIOD, GPIOD_AUDIO_PWR);
+	//palSetPad(GPIOD, GPIOD_AUDIO_PWR); // Turn off audio.
+	palClearPad(GPIOD, GPIOD_AUDIO_PWR); // Turn on audio.
 	
     dac_conversion.num_channels = 1U;
     dac_conversion.end_cb = end_cb1; //NULL

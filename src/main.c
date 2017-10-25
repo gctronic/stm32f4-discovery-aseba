@@ -381,7 +381,7 @@ int main(void)
 	e_led_clear();
 	e_set_body_led(0);
 	e_set_front_led(0);
-//	imu_start();
+	imu_start();
 	adc_start();
 	proximity_start();
 	dac_start();	
@@ -469,6 +469,8 @@ int main(void)
 	int rc;
 	DWORD buff[512];  /* 2048 byte working buffer */	
 	
+	signed int leftSpeed=0, rightSpeed=0;
+
     //messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
     //proximity_msg_t proximity;
 
@@ -476,7 +478,7 @@ int main(void)
 	
     /* Infinite loop. */
     while (1) {
-        chThdSleepMilliseconds(250);
+        chThdSleepMilliseconds(10);
 	
 		switch(getselector()) {
 			case 0:
@@ -571,8 +573,8 @@ int main(void)
 				break;
 				
 			case 8:
-				motor_set_speed(&right_motor, 1000);
-				motor_set_speed(&left_motor, -1000);
+				right_motor_set_speed(2200);
+				left_motor_set_speed(-2200);
 				break;
 				
 			case 9:
@@ -649,6 +651,10 @@ int main(void)
 				break;
 				
 			case 11:
+				leftSpeed = 2000 - proxMsg.delta[0]*4 - proxMsg.delta[1]*2;
+				rightSpeed = 2000 - proxMsg.delta[7]*4 - proxMsg.delta[6]*2;
+				right_motor_set_speed(rightSpeed);
+				left_motor_set_speed(leftSpeed);
 				break;
 				
 			case 12:
