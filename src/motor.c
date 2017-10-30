@@ -3,10 +3,6 @@
 #include "motor.h"
 #include "leds.h"
 
-#define MOTOR_TIMER_FREQ 100000 // [Hz]
-#define MOTOR_SPEED_LIMIT 2200 // [steps/s]
-#define THRESV 650 // This the speed under which the power save feature is active.
-
 static const uint8_t step_halt[4] = {0, 0, 0, 0};
 static const uint8_t step_table[8][4] = {
     {1, 0, 1, 0},

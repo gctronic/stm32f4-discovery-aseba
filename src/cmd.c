@@ -680,11 +680,11 @@ static void cmd_set_led(BaseSequentialStream *chp, int argc, char **argv)
         led_value = (uint8_t) atoi(argv[1]);
 		
 		if(led_num <= 3) {
-			e_set_led(led_num, led_value);
+			set_led(led_num, led_value);
 		} else if(led_num == 4) {
-			e_set_body_led(led_value);
+			set_body_led(led_value);
 		} else if(led_num == 5) {
-			e_set_front_led(led_value);
+			set_front_led(led_value);
 		}
     }
 }

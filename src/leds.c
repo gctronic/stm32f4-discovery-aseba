@@ -10,7 +10,7 @@
  * \warning if led_number is other than 0-3, all leds are set
  * to the indicated value.
  */
-void e_set_led(unsigned int led_number, unsigned int value)
+void set_led(unsigned int led_number, unsigned int value)
 {
 	switch(led_number)
 	{
@@ -48,7 +48,7 @@ void e_set_led(unsigned int led_number, unsigned int value)
 			}
 		default:
 			for(int i=0; i<4; i++) {
-				e_set_led(i, value);
+				set_led(i, value);
 			}
 	}
 }
@@ -59,7 +59,7 @@ void e_set_led(unsigned int led_number, unsigned int value)
  * you can change the state of this LED.
  * \param value 0 (off), 1 (on) otherwise change the state
  */
-void e_set_body_led(unsigned int value)
+void set_body_led(unsigned int value)
 {
 	if(value>1)
 		palTogglePad(GPIOD, GPIOD_LED_BODY);
@@ -73,7 +73,7 @@ void e_set_body_led(unsigned int value)
  * change the state of this LED.
  * \param value 0 (off), 1 (on) otherwise change the state
  */
-void e_set_front_led(unsigned int value)
+void set_front_led(unsigned int value)
 {
 	if(value>1)
 		palTogglePad(GPIOD, GPIOD_LED_FRONT);
@@ -86,9 +86,9 @@ void e_set_front_led(unsigned int value)
  * The e-puck has 8 green LEDs. This function turn all off.
  * \warning this function doesn't turn off "body LED" and "front LED".
  */
-void e_led_clear(void)
+void clear_leds(void)
 {
 	for(int i=0; i<4; i++) {
-		e_set_led(i, 0);
+		set_led(i, 0);
 	}
 }

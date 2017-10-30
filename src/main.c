@@ -33,7 +33,7 @@
 #include "sdcard.h"
 #include <ff.h>
 #include "diskio.h"
-#include "Asercom.h"
+#include "epuck1x/Asercom.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -48,10 +48,14 @@ CONDVAR_DECL(bus_condvar);
 
 parameter_namespace_t parameter_root, aseba_ns;
 
+uint8_t asercomThdState = 0;
+static THD_WORKING_AREA(asercom_thd_wa, 1024);
+
 uint8_t capture_mode = CAPTURE_ONE_SHOT;
 uint8_t *sample_buffer = NULL;
 uint8_t *sample_buffer2 = NULL;
 uint8_t double_buffering = 0;
+uint8_t camReady = 0;
 
 uint8_t txComplete = 0;
 uint8_t btnState = 0;
@@ -118,6 +122,8 @@ void dmaTransferEndCb(DCMIDriver* dcmip) {
    (void) dcmip;
     //palTogglePad(GPIOD, 15); // Blue.
 	//osalEventBroadcastFlagsI(&ss_event, 0);
+   camReady = 1;
+   set_body_led(0);
 }
 
 void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err) {
@@ -362,6 +368,24 @@ FRESULT open_append(
 	return fr;
 }
 
+static THD_FUNCTION(asercom_thd, arg)
+{
+    (void) arg;
+    chRegSetThreadName(__FUNCTION__);
+
+    run_asercom();
+
+//	while (true) {
+//		if(get_selector() != 12) {
+//			break;
+//		}
+//		//blabla();
+//		run_asercom();
+//	}
+//
+//	asercomThdState = 0;
+}
+
 int main(void)
 {
 
@@ -377,9 +401,9 @@ int main(void)
 	sdStart(&SD3, NULL); // UART3.
 	usb_start();
 	i2c_start();
-	e_led_clear();
-	e_set_body_led(0);
-	e_set_front_led(0);
+	clear_leds();
+	set_body_led(0);
+	set_front_led(0);
 //	imu_start();
 	adc_start();
 	proximity_start();
@@ -460,14 +484,19 @@ int main(void)
 	FRESULT fr;
 	FIL fil;
 	FATFS fs;           // Filesystem object.
-	BYTE work[1024]; /* Work area (larger is better for processing time) */
+	//BYTE work[1024]; /* Work area (larger is better for processing time) */
 	int rc;
-	DWORD buff[512];  /* 2048 byte working buffer */	
+	//DWORD buff[512];  /* 2048 byte working buffer */
 	
 	signed int leftSpeed=0, rightSpeed=0;
 
     messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t proximity;
+
+    //char myChar;
+    int8_t myChar;
+    static char myCharArr[64];
+    char myCharArr2[3] = {'a', 'b', 'c'};
 
 	chThdSleepMilliseconds(5000);
 	
@@ -475,7 +504,7 @@ int main(void)
     while (1) {
         chThdSleepMilliseconds(10);
 	
-		switch(getselector()) {
+		switch(get_selector()) {
 			case 0:
 				mpu9250_read_gyro_raw((int16_t *)&gyro);
 				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
@@ -493,12 +522,12 @@ int main(void)
 				break;
 				
 			case 2:
-				e_set_led(0, 2);
-				e_set_led(1, 2);
-				e_set_led(2, 2);
-				e_set_led(3, 2);
-				e_set_body_led(2);
-				e_set_front_led(2);
+				set_led(0, 2);
+				set_led(1, 2);
+				set_led(2, 2);
+				set_led(3, 2);
+				set_body_led(2);
+				set_front_led(2);
 				break;
 				
 			case 3:
@@ -649,7 +678,41 @@ int main(void)
 				break;
 				
 			case 12:
-				run_asercom();
+				if(asercomThdState == 0) {
+					asercomThdState = 1;
+					chThdCreateStatic(asercom_thd_wa, sizeof(asercom_thd_wa), NORMALPRIO, asercom_thd, NULL);
+				}
+
+				// OK
+//				if(e_getchar_uart2(&myChar)	 > 0) {
+//				if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) { // MS2ST(10)
+//				if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//				if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
+//					chSequentialStreamPut(&SDU1, myChar);
+//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+//					chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
+//				}
+
+//				if(e_getchar_uart2(&myChar)	 > 0) {
+//				//if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
+//				//if(sdReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
+//				//if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//				//if(chnReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
+//				//if(chnReadTimeout(&SDU1, &myChar, 1, MS2ST(1)) > 0) {
+//				//if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar[0]);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%c\r\n", myChar);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", 4);
+//					//chprintf(&SDU1, "%c\r\n", myChar);
+//					//chSequentialStreamPut(&SDU1, myChar);
+//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+//					//chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
+//				}
+
+//				while(e_getchar_uart2(&myChar) == 0);
+//				chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+
 				break;
 				
 			case 13:
@@ -662,8 +725,8 @@ int main(void)
 				break;				
 		}
 		
-		//e_set_body_led(2);
-		//e_set_front_led(2);
+		//set_body_led(2);
+		//set_front_led(2);
 		
         // Led toggled to verify main is running and to show DCMI state.
         if(dcmiErrorFlag == 1) {

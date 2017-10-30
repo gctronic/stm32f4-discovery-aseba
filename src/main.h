@@ -21,6 +21,7 @@ extern uint8_t capture_mode;
 extern uint8_t *sample_buffer;
 extern uint8_t *sample_buffer2;
 extern uint8_t double_buffering;
+extern uint8_t camReady;
 extern uint8_t txComplete;
 
 #ifdef __cplusplus

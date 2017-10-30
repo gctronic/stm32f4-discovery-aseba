@@ -68,5 +68,5 @@ void sdcard_automount(void)
 
 void sdcard_activity(void)
 {
-	e_set_body_led(2);
+	set_body_led(2);
 }

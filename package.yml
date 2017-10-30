@@ -46,6 +46,8 @@ target.arm:
     - src/camera/po8030.c
     - src/leds.c
     - src/utility.c
+    - src/epuck1x/epuck1x-wrapper.c
+    - src/epuck1x/Asercom.c
 
 templates:
     src/src.mk.jinja: src/src.mk

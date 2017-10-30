@@ -19,11 +19,17 @@ typedef struct {
 
     /** Difference between ambient and reflected. */
     unsigned int delta[PROXIMITY_NB_CHANNELS];
+
+    /** Initial values saved during calibration. */
+    unsigned int initValue[PROXIMITY_NB_CHANNELS];
 } proximity_msg_t;
 
 
 void proximity_start(void);
-void getProx0(uint16_t *ambient, uint16_t *reflected, uint16_t *delta);
+void calibrate_ir(void);
+int get_prox(unsigned int sensor_number);
+int get_calibrated_prox(unsigned int sensor_number);
+int get_ambient_light(unsigned int sensor_number);
 
 #ifdef __cplusplus
 }

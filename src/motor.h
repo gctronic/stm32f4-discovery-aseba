@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <hal.h>
 
+#define MOTOR_TIMER_FREQ 100000 // [Hz]
+#define MOTOR_SPEED_LIMIT 2200 // [steps/s]
+#define THRESV 650 // This the speed under which the power save feature is active.
+
 struct stepper_motor_s {
     enum {
         HALT=0,
