@@ -379,8 +379,8 @@ int run_asercom(void) {
                             while (e_getchar_uart2(&c2) == 0);
                         }
                         speedr = (unsigned char) c1 + ((unsigned int) c2 << 8);
-                        e_set_speed_left(speedl);
-                        e_set_speed_right(speedr);
+                        e_set_speed_left((int16_t)speedl);
+                        e_set_speed_right((int16_t)speedr);
                         break;
                     case 'E': // get motor speed
                         buffer[i++] = speedl & 0xff;

@@ -7,7 +7,9 @@ extern "C" {
 /** Message containing one measurement from the IMU. */
 typedef struct {
     float acceleration[3];
-    float roll_rate[3];
+    float gyro[3];
+    int16_t acc_raw[3];
+    int16_t gyro_raw[3];
 } imu_msg_t;
 
 /** Starts the Inertial Motion Unit (IMU) publisher. */

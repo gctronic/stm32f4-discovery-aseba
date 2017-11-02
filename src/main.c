@@ -34,6 +34,7 @@
 #include <ff.h>
 #include "diskio.h"
 #include "epuck1x/Asercom.h"
+#include "exti.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -123,7 +124,6 @@ void dmaTransferEndCb(DCMIDriver* dcmip) {
     //palTogglePad(GPIOD, 15); // Blue.
 	//osalEventBroadcastFlagsI(&ss_event, 0);
    camReady = 1;
-   set_body_led(0);
 }
 
 void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err) {
@@ -404,11 +404,12 @@ int main(void)
 	clear_leds();
 	set_body_led(0);
 	set_front_led(0);
-//	imu_start();
+	imu_start();
 	adc_start();
 	proximity_start();
-	dac_start();	
+	dac_start();
 	motors_init();
+	exti_start();
 	
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
@@ -490,35 +491,41 @@ int main(void)
 	
 	signed int leftSpeed=0, rightSpeed=0;
 
-    messagebus_topic_t *topic = messagebus_find_topic_blocking(&bus, "/proximity");
+    messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t proximity;
+
+    messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
+    imu_msg_t imu;
 
     //char myChar;
     int8_t myChar;
-    static char myCharArr[64];
-    char myCharArr2[3] = {'a', 'b', 'c'};
+    //static char myCharArr[64];
+    //char myCharArr2[3] = {'a', 'b', 'c'};
 
-	chThdSleepMilliseconds(5000);
-	
+//    uint16_t camId = 0;
+//	po8030_read_id(&camId);
+
+    chThdSleepMilliseconds(5000);
+
     /* Infinite loop. */
     while (1) {
         chThdSleepMilliseconds(10);
 	
 		switch(get_selector()) {
 			case 0:
-				mpu9250_read_gyro_raw((int16_t *)&gyro);
+				messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
 				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
 					continue;
 				}
-				chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", gyro[0], gyro[1], gyro[2]);
+				//chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", imu.gyro_raw[0], imu.gyro_raw[1], imu.gyro_raw[2]);
 				break;
 				
 			case 1:
-				mpu9250_read_acc_raw((int16_t *)&acc);
+				messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
 				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
 					continue;
 				}
-				chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", acc[0], acc[1], acc[2]);
+				//chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", imu.acc_raw[0], imu.acc_raw[1], imu.acc_raw[2]);
 				break;
 				
 			case 2:
@@ -532,7 +539,7 @@ int main(void)
 				
 			case 3:
 				// Read proximity sensors.
-				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
+				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
 
 				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
 					continue;
@@ -670,7 +677,7 @@ int main(void)
 				break;
 				
 			case 11:
-				messagebus_topic_wait(topic, &proximity, sizeof(proximity));
+				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
 				leftSpeed = 2000 - proximity.delta[0]*4 - proximity.delta[1]*2;
 				rightSpeed = 2000 - proximity.delta[7]*4 - proximity.delta[6]*2;
 				right_motor_set_speed(rightSpeed);

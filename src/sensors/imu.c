@@ -28,11 +28,9 @@ static void imu_low_level_init(mpu60X0_t *mpu)
 }
 */
 
-static THD_FUNCTION(imu_reader_thd, arg)
-{
-    // (void) arg;
-
-    // chRegSetThreadName(__FUNCTION__);
+static THD_FUNCTION(imu_reader_thd, arg) {
+     (void) arg;
+     chRegSetThreadName(__FUNCTION__);
 
     // event_listener_t imu_int;
     // mpu60X0_t dev;
@@ -45,32 +43,42 @@ static THD_FUNCTION(imu_reader_thd, arg)
                                // (eventmask_t)IMU_INTERRUPT_EVENT,
                                // (eventflags_t)EXTI_EVENT_MPU6000_INT);
 
-    // /* Declares the topic on the bus. */
-    // TOPIC_DECL(imu_topic, imu_msg_t);
-    // messagebus_advertise_topic(&bus, &imu_topic.topic, "/imu");
+     imu_msg_t imuMsgTopic;
 
-    // while (true) {
-        // imu_msg_t msg;
+     // Declares the topic on the bus.
+     messagebus_topic_t imu_topic;
+     MUTEX_DECL(imu_topic_lock);
+     CONDVAR_DECL(imu_topic_condvar);
+     messagebus_topic_init(&imu_topic, &imu_topic_lock, &imu_topic_condvar, &imuMsgTopic, sizeof(imuMsgTopic));
+     messagebus_advertise_topic(&bus, &imu_topic, "/imu");
 
-        // /* Wait for a measurement to come. */
-        // chEvtWaitAny(IMU_INTERRUPT_EVENT);
+     while (true) {
 
-        // /* Read the incoming measurement. */
-        // mpu60X0_read(&dev, msg.roll_rate, msg.acceleration, NULL);
+//         /* Wait for a measurement to come. */
+//         chEvtWaitAny(IMU_INTERRUPT_EVENT);
 
-        // /* Publish it on the bus. */
-        // messagebus_topic_publish(&imu_topic.topic, &msg, sizeof(msg));
-    // }
+//         /* Read the incoming measurement. */
+//         mpu60X0_read(&dev, msg.roll_rate, msg.acceleration, NULL);
+
+    	 mpu9250_read_gyro_raw((int16_t *)&imuMsgTopic.gyro_raw);
+    	 mpu9250_read_acc_raw((int16_t *)&imuMsgTopic.acc_raw);
+
+         /* Publish it on the bus. */
+         messagebus_topic_publish(&imu_topic, &imuMsgTopic, sizeof(imuMsgTopic));
+
+         chThdSleepMilliseconds(50);
+
+     }
 }
 
 void imu_start(void)
 {
-    //static THD_WORKING_AREA(imu_reader_thd_wa, 2048);
-    //chThdCreateStatic(imu_reader_thd_wa, sizeof(imu_reader_thd_wa), NORMALPRIO, imu_reader_thd, NULL);
+    static THD_WORKING_AREA(imu_reader_thd_wa, 1024);
+    chThdCreateStatic(imu_reader_thd_wa, sizeof(imu_reader_thd_wa), NORMALPRIO, imu_reader_thd, NULL);
 
-	uint8_t imu_id = 0;
-	mpu9250_read_id(&imu_id);
-	chprintf((BaseSequentialStream *)&SDU1, "imu id=%X\r\n", imu_id);
+	//uint8_t imu_id = 0;
+	//mpu9250_read_id(&imu_id);
+	//chprintf((BaseSequentialStream *)&SDU1, "imu id=%X\r\n", imu_id);
 	
     //mpu9250_setup(MPU60X0_ACC_FULL_RANGE_2G
     //              | MPU60X0_GYRO_FULL_RANGE_250DPS

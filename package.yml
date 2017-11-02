@@ -48,6 +48,7 @@ target.arm:
     - src/utility.c
     - src/epuck1x/epuck1x-wrapper.c
     - src/epuck1x/Asercom.c
+    - src/exti.c
 
 templates:
     src/src.mk.jinja: src/src.mk
