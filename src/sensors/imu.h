@@ -6,8 +6,9 @@ extern "C" {
 
 /** Message containing one measurement from the IMU. */
 typedef struct {
-    float acceleration[3];
-    float gyro[3];
+    float acceleration[3]; // m/s^2
+    float gyro[3]; // rad/s
+    float temp;
     int16_t acc_raw[3];
     int16_t gyro_raw[3];
 } imu_msg_t;

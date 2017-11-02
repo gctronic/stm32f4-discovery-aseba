@@ -49,8 +49,7 @@ CONDVAR_DECL(bus_condvar);
 
 parameter_namespace_t parameter_root, aseba_ns;
 
-uint8_t asercomThdState = 0;
-static THD_WORKING_AREA(asercom_thd_wa, 1024);
+static THD_WORKING_AREA(selector_thd_wa, 2048);
 
 uint8_t capture_mode = CAPTURE_ONE_SHOT;
 uint8_t *sample_buffer = NULL;
@@ -368,22 +367,256 @@ FRESULT open_append(
 	return fr;
 }
 
-static THD_FUNCTION(asercom_thd, arg)
+static THD_FUNCTION(selector_thd, arg)
 {
     (void) arg;
     chRegSetThreadName(__FUNCTION__);
 
-    run_asercom();
+    messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
+    imu_msg_t imu;
+	int16_t gyro[3];
+	int16_t acc[3];
 
-//	while (true) {
-//		if(get_selector() != 12) {
-//			break;
-//		}
-//		//blabla();
-//		run_asercom();
-//	}
-//
-//	asercomThdState = 0;
+    messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
+    proximity_msg_t proximity;
+	signed int leftSpeed=0, rightSpeed=0;
+
+	uint8_t playing = 0;
+
+	uint8_t tof_measuring = 0;
+
+	uint8_t sdState = 0;
+	FRESULT fr;
+	FIL fil;
+	FATFS fs;           // Filesystem object.
+	//BYTE work[1024]; /* Work area (larger is better for processing time) */
+	int rc;
+	//DWORD buff[512];  /* 2048 byte working buffer */
+
+    //char myChar;
+    int8_t myChar;
+    //static char myCharArr[64];
+    //char myCharArr2[3] = {'a', 'b', 'c'};
+
+    while(1) {
+		switch(get_selector()) {
+			case 0: // Read IMU raw senosrs values.
+		    	messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
+		    	if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+		    		continue;
+		    	}
+		    	chprintf((BaseSequentialStream *)&SDU1, "%Ax=%-7d Ay=%-7d Az=%-7d Gx=%-7d Gy=%-7d Gz=%-7d\r\n", imu.acc_raw[0], imu.acc_raw[1], imu.acc_raw[2], imu.gyro_raw[0], imu.gyro_raw[1], imu.gyro_raw[2]);
+				break;
+
+			case 1: // Read acceleration and rotation speeed (rad/s).
+		    	messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
+		    	if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+		    		continue;
+		    	}
+		    	chprintf((BaseSequentialStream *)&SDU1, "%Ax=%-7.3f Ay=%-7.3f Az=%-7.3f Gx=%-6.3f Gy=%-6.3f Gz=%-6.3f\r\n", imu.acceleration[0], imu.acceleration[1], imu.acceleration[2], imu.gyro[0], imu.gyro[1], imu.gyro[2]);
+				break;
+
+			case 2: // Led toggling.
+				set_led(0, 2);
+				set_led(1, 2);
+				set_led(2, 2);
+				set_led(3, 2);
+				set_body_led(2);
+				set_front_led(2);
+				break;
+
+			case 3: // Read proximity sensors.
+				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
+
+				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+					continue;
+				}
+
+				// Sensors info print: each line contains data related to a single sensor.
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.ambient[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.reflected[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proximity.delta[i]);
+//		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+				// CSV print: each line contains IR0amb, IR0ref, IR0delta, IR1amb, ..., IR7delta.
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d;%.4d;%.4d;", proximity.ambient[i], proximity.reflected[i], proximity.delta[i]);
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+
+		        // CSV print: each line contains only delta values for each sensor.
+		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
+		        }
+		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+				break;
+
+			case 4:
+				if(playing == 0) {
+					//audio_start(200);
+					dac_play(200);
+					playing = 1;
+				}
+				break;
+
+			case 5:
+				if(playing == 0) {
+					//audio_start(2000);
+					dac_play(2000);
+					playing = 1;
+				}
+				break;
+
+			case 6:
+				if(playing == 0) {
+					//audio_start(10000);
+					dac_play(10000);
+					playing = 1;
+				}
+				break;
+
+			case 7:
+				if(tof_measuring == 0) {
+					tof_measuring = 1;
+					VL53L0X_init_demo();
+				}
+				break;
+
+			case 8:
+				right_motor_set_speed(2200);
+				left_motor_set_speed(-2200);
+				break;
+
+			case 9:
+				//chprintf((BaseSequentialStream *)&SDU1, "sdState=%d\r\n", sdState);
+				switch(sdState) {
+					case 0:
+						palSetPadMode(GPIOC, GPIOC_MIC_SPI3_SCK, PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_PUDR_PULLUP | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_ALTERNATE(12));
+						sdcard_start();
+						sdState = 1;
+						break;
+
+					case 1:
+						sdcard_automount();
+						sdState = 2;
+						break;
+
+					case 2:
+						/*
+						chprintf((BaseSequentialStream *)&SDU1, "formatting the micro sd...\r\n");
+						fr = f_mkfs("", 0, 0);
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "f_mkfs err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+						*/
+
+						/*
+						chprintf((BaseSequentialStream *)&SDU1, "opening file...\r\n");
+						fr = f_open(&fil, "logfile.txt", FA_READ);
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+						*/
+
+						chprintf((BaseSequentialStream *)&SDU1, "opening file for writing...\r\n");
+						fr = open_append(&fil, "logfile.txt");
+						if (fr != FR_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
+							sdState = 3;
+						}
+						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
+
+						/*
+						// Append a line
+						f_printf(&fil, "%02u/%02u/%u, %2u:%02u\n", 31, 8, 2017, 9, 32);
+
+						// Close the file
+						f_close(&fil);
+						*/
+						sdState = 3;
+						break;
+
+					case 3:
+						/*
+						sdcard_automount();
+						*/
+						break;
+				}
+				break;
+
+			case 10:
+				/*
+				// Check function/compatibility of the physical drive #0
+				rc = test_diskio(0, 1, buff, sizeof buff);
+				if (rc) {
+					chprintf((BaseSequentialStream *)&SDU1, "Sorry the function/compatibility test failed.\nFatFs will not work on this disk driver.\n");
+				} else {
+					chprintf((BaseSequentialStream *)&SDU1, "Congratulations! The disk I/O layer works well.\n");
+				}
+				*/
+				break;
+
+			case 11:
+				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
+				leftSpeed = 2000 - proximity.delta[0]*4 - proximity.delta[1]*2;
+				rightSpeed = 2000 - proximity.delta[7]*4 - proximity.delta[6]*2;
+				right_motor_set_speed(rightSpeed);
+				left_motor_set_speed(leftSpeed);
+				break;
+
+			case 12:
+				run_asercom();
+
+				// OK
+//				if(e_getchar_uart2(&myChar)	 > 0) {
+//				if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) { // MS2ST(10)
+//				if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//				if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
+//					chSequentialStreamPut(&SDU1, myChar);
+//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+//					chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
+//				}
+
+//				if(e_getchar_uart2(&myChar)	 > 0) {
+//				//if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
+//				//if(sdReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
+//				//if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//				//if(chnReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
+//				//if(chnReadTimeout(&SDU1, &myChar, 1, MS2ST(1)) > 0) {
+//				//if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar[0]);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%c\r\n", myChar);
+//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", 4);
+//					//chprintf(&SDU1, "%c\r\n", myChar);
+//					//chSequentialStreamPut(&SDU1, myChar);
+//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+//					//chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
+//				}
+
+//				while(e_getchar_uart2(&myChar) == 0);
+//				chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
+
+				break;
+
+			case 13:
+				break;
+
+			case 14:
+				break;
+
+			case 15:
+				break;
+		}
+    	chThdSleepMilliseconds(10);
+    }
 }
 
 int main(void)
@@ -474,263 +707,17 @@ int main(void)
 //	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
-	
-	int16_t gyro[3];
-	int16_t acc[3];
-
-	uint8_t playing = 0;
-	uint8_t tof_measuring = 0;
-	
-	uint8_t sdState = 0;
-	FRESULT fr;
-	FIL fil;
-	FATFS fs;           // Filesystem object.
-	//BYTE work[1024]; /* Work area (larger is better for processing time) */
-	int rc;
-	//DWORD buff[512];  /* 2048 byte working buffer */
-	
-	signed int leftSpeed=0, rightSpeed=0;
-
-    messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
-    proximity_msg_t proximity;
-
-    messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
-    imu_msg_t imu;
-
-    //char myChar;
-    int8_t myChar;
-    //static char myCharArr[64];
-    //char myCharArr2[3] = {'a', 'b', 'c'};
 
 //    uint16_t camId = 0;
 //	po8030_read_id(&camId);
 
     chThdSleepMilliseconds(5000);
 
+    chThdCreateStatic(selector_thd_wa, sizeof(selector_thd_wa), NORMALPRIO, selector_thd, NULL);
+
     /* Infinite loop. */
     while (1) {
-        chThdSleepMilliseconds(10);
-	
-		switch(get_selector()) {
-			case 0:
-				messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
-				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
-					continue;
-				}
-				//chprintf((BaseSequentialStream *)&SDU1, "%gyro: x=%d, y=%d, z=%d\r\n", imu.gyro_raw[0], imu.gyro_raw[1], imu.gyro_raw[2]);
-				break;
-				
-			case 1:
-				messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
-				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
-					continue;
-				}
-				//chprintf((BaseSequentialStream *)&SDU1, "acc: x=%d, y=%d, z=%d\r\n", imu.acc_raw[0], imu.acc_raw[1], imu.acc_raw[2]);
-				break;
-				
-			case 2:
-				set_led(0, 2);
-				set_led(1, 2);
-				set_led(2, 2);
-				set_led(3, 2);
-				set_body_led(2);
-				set_front_led(2);
-				break;
-				
-			case 3:
-				// Read proximity sensors.
-				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
-
-				if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
-					continue;
-				}
-
-				// Sensors info print: each line contains data related to a single sensor.
-//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.ambient[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.reflected[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proximity.delta[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-//		        }
-//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-
-				// CSV print: each line contains IR0amb, IR0ref, IR0delta, IR1amb, ..., IR7delta.
-//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d;%.4d;%.4d;", proximity.ambient[i], proximity.reflected[i], proximity.delta[i]);
-//		        }
-//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-
-		        // CSV print: each line contains only delta values for each sensor.
-		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
-		        }
-		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-				break;
-				
-			case 4:
-				if(playing == 0) {
-					//audio_start(200);
-					dac_play(200);
-					playing = 1;
-				}
-				break;
-				
-			case 5:
-				if(playing == 0) {
-					//audio_start(2000);
-					dac_play(2000);
-					playing = 1;
-				}			
-				break;
-				
-			case 6:
-				if(playing == 0) {
-					//audio_start(10000);
-					dac_play(10000);
-					playing = 1;
-				}
-				break;
-				
-			case 7:
-				if(tof_measuring == 0) {
-					tof_measuring = 1;
-					VL53L0X_init_demo();
-				}
-				break;
-				
-			case 8:
-				right_motor_set_speed(2200);
-				left_motor_set_speed(-2200);
-				break;
-				
-			case 9:
-				//chprintf((BaseSequentialStream *)&SDU1, "sdState=%d\r\n", sdState);
-				switch(sdState) {
-					case 0:
-						palSetPadMode(GPIOC, GPIOC_MIC_SPI3_SCK, PAL_STM32_MODE_ALTERNATE | PAL_STM32_OTYPE_PUSHPULL | PAL_STM32_PUDR_PULLUP | PAL_STM32_OSPEED_HIGHEST | PAL_STM32_ALTERNATE(12));
-						sdcard_start();
-						sdState = 1;
-						break;
-						
-					case 1:
-						sdcard_automount();
-						sdState = 2;
-						break;
-						
-					case 2:
-						/*
-						chprintf((BaseSequentialStream *)&SDU1, "formatting the micro sd...\r\n");
-						fr = f_mkfs("", 0, 0);
-						if (fr != FR_OK) {
-							chprintf((BaseSequentialStream *)&SDU1, "f_mkfs err=%d\r\n", fr);
-							sdState = 3;
-						}
-						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
-						*/
-						
-						/*
-						chprintf((BaseSequentialStream *)&SDU1, "opening file...\r\n");
-						fr = f_open(&fil, "logfile.txt", FA_READ);
-						if (fr != FR_OK) {
-							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
-							sdState = 3;
-						}
-						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
-						*/
-						
-						chprintf((BaseSequentialStream *)&SDU1, "opening file for writing...\r\n");
-						fr = open_append(&fil, "logfile.txt");
-						if (fr != FR_OK) {
-							chprintf((BaseSequentialStream *)&SDU1, "open_append err=%d\r\n", fr);
-							sdState = 3;
-						}
-						chprintf((BaseSequentialStream *)&SDU1, "operation completed\r\n");
-						
-						/*
-						// Append a line
-						f_printf(&fil, "%02u/%02u/%u, %2u:%02u\n", 31, 8, 2017, 9, 32);
-						
-						// Close the file
-						f_close(&fil);
-						*/
-						sdState = 3;
-						break;
-						
-					case 3:
-						/*
-						sdcard_automount();
-						*/
-						break;
-				}
-				break;
-				
-			case 10:
-				/*
-				// Check function/compatibility of the physical drive #0
-				rc = test_diskio(0, 1, buff, sizeof buff);
-				if (rc) {
-					chprintf((BaseSequentialStream *)&SDU1, "Sorry the function/compatibility test failed.\nFatFs will not work on this disk driver.\n");
-				} else {
-					chprintf((BaseSequentialStream *)&SDU1, "Congratulations! The disk I/O layer works well.\n");
-				}
-				*/
-				break;
-				
-			case 11:
-				messagebus_topic_wait(proxTopic, &proximity, sizeof(proximity));
-				leftSpeed = 2000 - proximity.delta[0]*4 - proximity.delta[1]*2;
-				rightSpeed = 2000 - proximity.delta[7]*4 - proximity.delta[6]*2;
-				right_motor_set_speed(rightSpeed);
-				left_motor_set_speed(leftSpeed);
-				break;
-				
-			case 12:
-				if(asercomThdState == 0) {
-					asercomThdState = 1;
-					chThdCreateStatic(asercom_thd_wa, sizeof(asercom_thd_wa), NORMALPRIO, asercom_thd, NULL);
-				}
-
-				// OK
-//				if(e_getchar_uart2(&myChar)	 > 0) {
-//				if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) { // MS2ST(10)
-//				if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//				if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
-//					chSequentialStreamPut(&SDU1, myChar);
-//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-//					chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
-//				}
-
-//				if(e_getchar_uart2(&myChar)	 > 0) {
-//				//if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
-//				//if(sdReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
-//				//if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//				//if(chnReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
-//				//if(chnReadTimeout(&SDU1, &myChar, 1, MS2ST(1)) > 0) {
-//				//if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar[0]);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%c\r\n", myChar);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", 4);
-//					//chprintf(&SDU1, "%c\r\n", myChar);
-//					//chSequentialStreamPut(&SDU1, myChar);
-//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-//					//chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
-//				}
-
-//				while(e_getchar_uart2(&myChar) == 0);
-//				chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-
-				break;
-				
-			case 13:
-				break;
-				
-			case 14:
-				break;
-				
-			case 15:
-				break;				
-		}
+        chThdSleepMilliseconds(100);
 		
 		//set_body_led(2);
 		//set_front_led(2);
