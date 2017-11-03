@@ -60,7 +60,7 @@ void calibrate_ir(void) {
 	calibrationState = 0;
 	calibrationInProgress = 1;
 	while(calibrationInProgress) {
-		chThdSleepMilliseconds(50);
+		chThdSleepMilliseconds(20);
 	}
 }
 

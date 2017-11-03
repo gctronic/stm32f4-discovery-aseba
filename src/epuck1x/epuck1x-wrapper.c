@@ -1,5 +1,6 @@
 #include <hal.h>
 #include <stdlib.h>
+#include <math.h>
 #include "epuck1x-wrapper.h"
 #include "..\leds.h"
 #include "..\utility.h"
@@ -9,6 +10,7 @@
 #include "..\main.h"
 #include "..\camera\po8030.h"
 #include "..\camera\dcmi_camera.h"
+#include "..\sensors\imu.h"
 
 // LEDs handling.
 void e_set_led(unsigned int led_number, unsigned int value) {
@@ -193,3 +195,107 @@ void e_poxxxx_launch_capture(char * buf) {
 int e_poxxxx_is_img_ready(void) {
 	return image_is_ready();
 }
+
+// Accelerometer handling.
+/*! \brief Read the last value of a given accelerator axes
+ * \param captor		ID of the AD channel to read
+ *						(must be 0 = x, 1 = y or 2 = z)
+ * \return value		filtered channel's value
+ */
+int e_get_acc(unsigned int captor) {
+	return get_acc(captor);
+}
+
+/*! \brief Read the value of a channel, filtered by an averaging filter
+ * \param captor		ID of the AD channel to read (must be 0 to 2)
+ * \param filter_size	size of the filter (must be between 1 and SAMPLE_NUMBER)
+ * \return value		filtered channel's value
+ */
+int e_get_acc_filtered(unsigned int captor, unsigned int filter_size) {
+	return get_acc_filtered(captor, filter_size);
+}
+
+TypeAccSpheric e_read_acc_spheric(void) {
+	TypeAccSpheric result;
+	int16_t acc_x, acc_y, acc_z;
+	acc_x = get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0);	// generates positive
+	acc_y = get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1);	// and negative value
+	acc_z = get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2);	// to make the use easy
+
+	// Calculate the absolute acceleration value.
+	result.acceleration = sqrtf((float)(((long)acc_x * (long)acc_x) + ((long)acc_y * (long)acc_y) + ((long)acc_z * (long)acc_z)));
+	result.inclination =  90.0 - atan2f((float)(acc_z), sqrtf( (float)(((long)acc_x * (long)acc_x) + ((long)acc_y * (long)acc_y) ))) * CST_RADIAN;
+	if (result.inclination<5 || result.inclination>160) {
+		result.orientation=0;
+	} else {
+		result.orientation = (atan2f((float)(acc_x), (float)(acc_y)) * CST_RADIAN) + 180.0;		// 180 is added to have 0 to 360° range
+	}
+	return result;
+}
+
+float e_read_orientation(void) {
+	TypeAccSpheric result;
+	int16_t acc_x, acc_y, acc_z;
+	acc_x = get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0);	// generates positive
+	acc_y = get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1);	// and negative value
+	acc_z = get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2);	// to make the use easy
+
+	result.inclination =  90.0 - atan2f((float)(acc_z), sqrtf( (float)(((long)acc_x * (long)acc_x) + ((long)acc_y * (long)acc_y) ))) * CST_RADIAN;
+	if (result.inclination<5 || result.inclination>160) {
+		result.orientation=0;
+	} else {
+		result.orientation = (atan2f((float)(acc_x), (float)(acc_y)) * CST_RADIAN) + 180.0;		// 180 is added to have 0 to 360° range
+	}
+	return result.orientation;
+}
+
+float e_read_inclination(void) {
+	TypeAccSpheric result;
+	int16_t acc_x, acc_y, acc_z;
+	acc_x = get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0);	// generates positive
+	acc_y = get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1);	// and negative value
+	acc_z = get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2);	// to make the use easy
+
+	result.inclination =  90.0 - atan2f((float)(acc_z), sqrtf( (float)(((long)acc_x * (long)acc_x) + ((long)acc_y * (long)acc_y) ))) * CST_RADIAN;
+	return result.inclination;
+}
+
+float e_read_acc(void) {
+	TypeAccSpheric result;
+	int16_t acc_x, acc_y, acc_z;
+	acc_x = get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0);	// generates positive
+	acc_y = get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1);	// and negative value
+	acc_z = get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2);	// to make the use easy
+
+	result.acceleration = sqrtf((float)(((long)acc_x * (long)acc_x) + ((long)acc_y * (long)acc_y) + ((long)acc_z * (long)acc_z)));
+	return result.acceleration;
+}
+
+TypeAccRaw e_read_acc_xyz(void) {
+	TypeAccRaw result;
+	result.acc_x = get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0);	// generates positive
+	result.acc_y = get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1);	// and negative value
+	result.acc_z = get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2);	// to make the use easy
+	return result;
+}
+
+int e_read_acc_x(void) {
+	return (get_acc_filtered(0, FILTER_SIZE) - get_acc_offset(0));
+}
+
+int e_read_acc_y(void) {
+	return (get_acc_filtered(1, FILTER_SIZE) - get_acc_offset(1));
+}
+
+int e_read_acc_z(void) {
+	return (get_acc_filtered(2, FILTER_SIZE) - get_acc_offset(2));
+}
+
+void e_acc_calibr(void) {
+	calibrate_acc();
+}
+
+void e_display_angle(void) {
+
+}
+

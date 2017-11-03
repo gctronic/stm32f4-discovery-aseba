@@ -163,8 +163,11 @@ static THD_FUNCTION(remote_thd, arg)
 {
     (void) arg;
     chRegSetThreadName(__FUNCTION__);
+    systime_t time;
 
     while(1) {
+
+    	time = chVTGetSystemTime();
 
 		if(command_received) {
 			command_received = 0;
@@ -222,7 +225,7 @@ static THD_FUNCTION(remote_thd, arg)
 			}
 		}
 
-		chThdSleepMilliseconds(200);
+		chThdSleepUntilWindowed(time, time + MS2ST(200)); // Receive commands at most @ 5 Hz.
     }
 
 }

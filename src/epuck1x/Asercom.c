@@ -65,12 +65,12 @@ int run_asercom(void) {
     static int i, j, n, speedr, speedl, positionr, positionl, LED_nbr, LED_action, accx, accy, accz; //, sound, gyrox, gyroy, gyroz;
     static int cam_mode, cam_width, cam_heigth, cam_zoom, cam_size; //, cam_x1, cam_y1;
 //    static char first = 0;
-//    char *ptr;
+    char *ptr;
 //    static int mod, reg, val;
 #ifdef IR_RECEIVER
 //    char ir_move = 0, ir_address = 0, ir_last_move = 0;
 #endif
-//    static TypeAccSpheric accelero;
+    static TypeAccSpheric accelero;
     //static TypeAccRaw accelero_raw;
     int use_bt = 0;
 //    unsigned int battValue = 0;
@@ -260,12 +260,10 @@ int run_asercom(void) {
 //#endif
         }
 
-        //chnWriteTimeout(&SDU1, c, 1, TIME_INFINITE);
-
         if ((int8_t)c < 0) { // binary mode (big endian)
             i = 0;
             do {
-                switch (-c) {
+                switch ((int8_t)-c) {
                     case 'a': // Read acceleration sensors in a non filtered way, same as ASCII
 //                        if(use_bt) {
 //                            accx = e_get_acc_filtered(0, 1);
@@ -280,9 +278,9 @@ int run_asercom(void) {
 //                                accy = 0;
 //                                accz = 0;
 //                            } else {
-//                                accx = e_get_acc_filtered(0, 1);
-//                                accy = e_get_acc_filtered(1, 1);
-//                                accz = e_get_acc_filtered(2, 1);
+                                accx = e_get_acc_filtered(0, 1);
+                                accy = e_get_acc_filtered(1, 1);
+                                accz = e_get_acc_filtered(2, 1);
 //                            }
 //                        }
                         buffer[i++] = accx & 0xff;
@@ -302,48 +300,48 @@ int run_asercom(void) {
 //                                accelero.inclination = 0.0;
 //                                accelero.orientation = 0.0;
 //                            } else {
-//                                accelero = e_read_acc_spheric();
+                                accelero = e_read_acc_spheric();
 //                            }
 //                        }
-//                        ptr = (char *) &accelero.acceleration;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//
-//                        ptr = (char *) &accelero.orientation;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//
-//                        ptr = (char *) &accelero.inclination;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
-//                        ptr++;
-//                        buffer[i++] = (*ptr);
+                        ptr = (char *) &accelero.acceleration;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
 
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
-                        buffer[i++] = 0;
+                        ptr = (char *) &accelero.orientation;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+
+                        ptr = (char *) &accelero.inclination;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+                        ptr++;
+                        buffer[i++] = (*ptr);
+
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
+//                        buffer[i++] = 0;
 
                         break;
 
@@ -655,14 +653,14 @@ int run_asercom(void) {
 //                        if(isEpuckVersion1_3()) {
 //                            sprintf(buffer, "a,0,0,0\r\n");
 //                        } else {
-//                            sprintf(buffer, "a,%d,%d,%d\r\n", e_get_acc_filtered(0, 1), e_get_acc_filtered(1, 1), e_get_acc_filtered(2, 1));
+                            sprintf(buffer, "a,%d,%d,%d\r\n", e_get_acc_filtered(0, 1), e_get_acc_filtered(1, 1), e_get_acc_filtered(2, 1));
 //                        }
 //                    }
-//                    if (use_bt) {
-//                        uart1_send_text(buffer);
-//                    } else {
-//                        uart2_send_text(buffer);
-//                    }
+                    if (use_bt) {
+                        uart1_send_text(buffer);
+                    } else {
+                        uart2_send_text(buffer);
+                    }
                     break;
                 case 'b': // battery state
 //                    if (isEpuckVersion1_3()) {

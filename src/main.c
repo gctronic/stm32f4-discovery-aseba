@@ -396,7 +396,7 @@ int main(void)
     //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    shell_start();
+    //shell_start();
 
     chThdSleepMilliseconds(5000);
 

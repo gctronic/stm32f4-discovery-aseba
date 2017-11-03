@@ -97,6 +97,57 @@ void e_poxxxx_write_cam_registers(void);
 void e_poxxxx_launch_capture(char * buf);
 int e_poxxxx_is_img_ready(void);
 
+// Accelerometer handling.
+#define FILTER_SIZE		5				// define the size of the averaging filter
+#define CST_RADIAN		(180.0/3.1415)	// used to convert radian in degrees
+/*! \struct TypeAccSpheric
+ * \brief struct to store the acceleration vector in spherical coord
+ */
+typedef struct
+{
+	float acceleration;		/*!< lenght of the acceleration vector
+							 * = intensity of the acceleration */
+	float orientation;		/*!< orientation of the acceleration vector
+							 * in the horizontal plan, zero facing front
+							 * - 0° = inclination to the front
+							 * (front part lower than rear part)
+							 * - 90° = inclination to the left
+							 * (left part lower than right part)
+							 * - 180° = inclination to the rear
+							 * (rear part lower than front part)
+							 * - 270° = inclination to the right
+							 * (right part lower than left part) */
+	float inclination;		/*!< inclination angle with the horizontal plan
+							 * - 0° = e-puck horizontal
+							 * - 90° = e-puck vertical
+							 * - 180° = e-puck horizontal but up-side-down */
+} TypeAccSpheric;
+
+/*! \struct TypeAccRaw
+ * \brief struct to store the acceleration raw data
+ * in carthesian coord
+ */
+typedef struct
+{
+	int acc_x;	/*!< The acceleration on x axis */
+	int acc_y;	/*!< The acceleration on y axis */
+	int acc_z;	/*!< The acceleration on z axis */
+} TypeAccRaw;
+
+int e_get_acc(unsigned int captor);
+int e_get_acc_filtered(unsigned int captor, unsigned int filter_size);
+TypeAccSpheric e_read_acc_spheric(void);
+float e_read_orientation(void);
+float e_read_inclination(void);
+float e_read_acc(void);
+TypeAccRaw e_read_acc_xyz(void);
+int e_read_acc_x(void);
+int e_read_acc_y(void);
+int e_read_acc_z(void);
+void e_acc_calibr(void);
+void e_display_angle(void);
+
+
 
 #ifdef __cplusplus
 }
