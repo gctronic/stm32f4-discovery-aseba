@@ -97,7 +97,7 @@ PROJECT = aseba-discovery
 
 # Imported source files and paths
 CHIBIOS = ./ChibiOS/
-CHIBIOS_EXT = ./ChibiOS-ext/
+CHIBIOS_EXT = ./ChibiOS_ext/
 # Startup files.
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 # HAL-OSAL files.

@@ -25,6 +25,9 @@
 #ifndef _DCMI_LLD_H_
 #define _DCMI_LLD_H_
 
+#include "stm32_registry.h"
+#include "stm32_rcc.h"
+
 #if HAL_USE_DCMI || defined(__DOXYGEN__)
 
 /*===========================================================================*/
@@ -129,6 +132,20 @@ typedef enum {
   DCMI_ERR_DMAFAILURE = 0,					/**< DMA operations failure.	*/
   DCMI_ERR_OVERFLOW = 1						/**< DCMI overflow condition.	*/
 } dcmierror_t;
+
+/**
+ * @brief   Driver state machine possible states.
+ */
+typedef enum {
+  DCMI_UNINIT = 0,					/**< Not initialized.									*/
+  DCMI_STOP = 1,					/**< Stopped.											*/
+  DCMI_READY = 2,					/**< Ready to begin listening.							*/
+  DCMI_ACTIVE_STREAM = 3,			/**< Listening for frames, continuous.					*/
+  DCMI_ACTIVE_ONESHOT = 4,			/**< Listening for frames, one shot.					*/
+  DCMI_COMPLETE = 5,				/**< Frame complete, callback pending.					*/
+  DCMI_ERROR = 6,					/**< DCMI or DMA error.									*/
+  DCMI_TIMEOUT = 7					/**< DCMI timeout, cannot stop correctly.				*/
+} dcmistate_t;
 
 /**
  * @brief   Type of a structure representing a DCMI driver.

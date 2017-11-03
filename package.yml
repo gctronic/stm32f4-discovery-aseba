@@ -2,7 +2,9 @@ dependency-dir: src/
 
 include_directories:
     - fatfs/src/
-
+    - ChibiOS_ext/os/hal/include
+    - ChibiOS_ext/os/hal/ports/STM32/STM32F4xx
+        
 depends:
     - cmp_mem_access
     - crc
@@ -44,11 +46,15 @@ target.arm:
     - src/audio/audio_thread.c
     - src/i2c_bus.c
     - src/camera/po8030.c
+    - src/camera/dcmi_camera.c
+    - ChibiOS_ext/os/hal/src/dcmi.c
+    - ChibiOS_ext/os/hal/ports/STM32/STM32F4xx/dcmi_lld.c
     - src/leds.c
     - src/utility.c
     - src/epuck1x/epuck1x-wrapper.c
     - src/epuck1x/Asercom.c
     - src/exti.c
+    - src/spi_comm.c
 
 templates:
     src/src.mk.jinja: src/src.mk

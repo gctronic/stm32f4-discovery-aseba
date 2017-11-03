@@ -477,6 +477,7 @@ VL53L0X_Error VL53L0X_get_info_from_device(VL53L0X_DEV Dev, uint8_t option)
 
 uint32_t VL53L0X_calc_macro_period_ps(VL53L0X_DEV Dev, uint8_t vcsel_period_pclks)
 {
+	(void)Dev;
 	uint64_t PLL_period_ps;
 	uint32_t macro_period_vclks;
 	uint32_t macro_period_ps;

@@ -25,6 +25,8 @@
 #include "ch.h"
 #include "hal.h"
 #include "chprintf.h"
+#include "dcmi_lld.h"
+#include "dcmi.h"
 
 #if HAL_USE_DCMI || defined(__DOXYGEN__)
 

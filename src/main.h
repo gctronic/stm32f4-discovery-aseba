@@ -7,21 +7,13 @@ extern "C" {
 
 #include "parameter/parameter.h"
 #include "msgbus/messagebus.h"
+#include "camera/dcmi_camera.h"
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;
 
 extern parameter_namespace_t parameter_root;
 
-#define MAX_BUFF_SIZE 76800 // Bytes.
-#define CAPTURE_ONE_SHOT 0
-#define CAPTURE_CONTINUOUS 1
-extern const DCMIConfig dcmicfg;
-extern uint8_t capture_mode;
-extern uint8_t *sample_buffer;
-extern uint8_t *sample_buffer2;
-extern uint8_t double_buffering;
-extern uint8_t camReady;
 extern uint8_t txComplete;
 
 #ifdef __cplusplus

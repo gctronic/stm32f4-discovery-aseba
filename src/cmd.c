@@ -13,6 +13,7 @@
 #include "main.h"
 #include "config_flash_storage.h"
 #include "camera/po8030.h"
+#include "camera/dcmi_camera.h"
 #include "leds.h"
 #include "motor.h"
 
@@ -592,11 +593,11 @@ static void cmd_cam_dcmi_prepare(BaseSequentialStream *chp, int argc, char **arg
         }
 
         if(capture_mode == CAPTURE_ONE_SHOT) {
-            dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
+            dcmi_prepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
             chprintf(chp, "DCMI prepared with single-buffering\r\n");
         } else {
             if(double_buffering == 0) {
-                dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
+                dcmi_prepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, NULL);
                 chprintf(chp, "DCMI prepared with single-buffering\r\n");
             } else {
                 if(sample_buffer2 != NULL) {
@@ -608,7 +609,7 @@ static void cmd_cam_dcmi_prepare(BaseSequentialStream *chp, int argc, char **arg
                     chprintf(chp, "Could not allocate buffer2\r\n");
                     return;
                 }
-                dcmiPrepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, (uint32_t*)sample_buffer2);
+                dcmi_prepare(&DCMID, &dcmicfg, image_size, (uint32_t*)sample_buffer, (uint32_t*)sample_buffer2);
                 chprintf(chp, "DCMI prepared with double-buffering\r\n");
             }
         }
@@ -620,7 +621,7 @@ static void cmd_cam_dcmi_unprepare(BaseSequentialStream *chp, int argc, char **a
     (void) argc;
     (void) argv;
 
-    dcmiUnprepare(&DCMID);
+    dcmi_unprepare(&DCMID);
 
     if(sample_buffer != NULL) {
         free(sample_buffer);
@@ -638,13 +639,14 @@ static void cmd_cam_dcmi_unprepare(BaseSequentialStream *chp, int argc, char **a
 
 static void cmd_cam_capture(BaseSequentialStream *chp, int argc, char **argv)
 {
+	(void) chp;
     (void) argc;
     (void) argv;
 
 	if(capture_mode == CAPTURE_ONE_SHOT) {
-		dcmiStartOneShot(&DCMID);
+		dcmi_start_one_shot(&DCMID);
 	} else {
-		dcmiStartStream(&DCMID);
+		dcmi_start_stream(&DCMID);
 	}
 
 }
@@ -658,7 +660,7 @@ static void cmd_cam_send(BaseSequentialStream *chp, int argc, char **argv)
 		txComplete = 1;
 		chprintf(chp, "The image will be sent within 5 seconds\r\n");
 	} else {
-		if(dcmiStopStream(&DCMID) == MSG_OK) {
+		if(dcmi_stop_stream(&DCMID) == MSG_OK) {
 			txComplete = 1;
 			chprintf(chp, "The image will be sent within 5 seconds\r\n");
 		} else {

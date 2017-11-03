@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void run_asercom();
+void run_asercom(void);
 
 #ifdef __cplusplus
 }

@@ -10,7 +10,7 @@ uint32_t imuConfig;
 
 int8_t mpu9250_setup(int config) {
 	int8_t err = 0;
-	int8_t regValue = 0;
+	uint8_t regValue = 0;
 	
 	imuConfig = config;
 

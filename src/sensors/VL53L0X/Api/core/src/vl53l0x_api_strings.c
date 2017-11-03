@@ -419,6 +419,7 @@ VL53L0X_Error VL53L0X_get_sequence_steps_info(
 VL53L0X_Error VL53L0X_get_limit_check_info(VL53L0X_DEV Dev, uint16_t LimitCheckId,
 	char *pLimitCheckString)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 
 	LOG_FUNCTION_START("");

@@ -192,6 +192,7 @@ VL53L0X_Error VL53L0X_GetPalState(VL53L0X_DEV Dev, VL53L0X_State *pPalState)
 
 VL53L0X_Error VL53L0X_SetPowerMode(VL53L0X_DEV Dev, VL53L0X_PowerModes PowerMode)
 {
+	(void)PowerMode;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	LOG_FUNCTION_START("");
 
@@ -227,6 +228,7 @@ VL53L0X_Error VL53L0X_SetPowerMode(VL53L0X_DEV Dev, VL53L0X_PowerModes PowerMode
 
 VL53L0X_Error VL53L0X_GetPowerMode(VL53L0X_DEV Dev, VL53L0X_PowerModes *pPowerMode)
 {
+	(void)pPowerMode;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	uint8_t Byte;
 	LOG_FUNCTION_START("");
@@ -315,6 +317,8 @@ VL53L0X_Error VL53L0X_SetGroupParamHold(VL53L0X_DEV Dev, uint8_t GroupParamHold)
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)GroupParamHold;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -327,6 +331,8 @@ VL53L0X_Error VL53L0X_GetUpperLimitMilliMeter(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)pUpperLimitMilliMeter;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -732,6 +738,7 @@ VL53L0X_Error VL53L0X_WaitDeviceBooted(VL53L0X_DEV Dev)
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -969,6 +976,8 @@ VL53L0X_Error VL53L0X_SetHistogramMode(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)HistogramMode;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -981,6 +990,8 @@ VL53L0X_Error VL53L0X_GetHistogramMode(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)pHistogramMode;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -1132,6 +1143,7 @@ VL53L0X_Error sequence_step_enabled(VL53L0X_DEV Dev,
 	VL53L0X_SequenceStepId SequenceStepId, uint8_t SequenceConfig,
 	uint8_t *pSequenceStepEnabled)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	*pSequenceStepEnabled = 0;
 	LOG_FUNCTION_START("");
@@ -1222,6 +1234,7 @@ VL53L0X_Error VL53L0X_GetSequenceStepEnables(VL53L0X_DEV Dev,
 VL53L0X_Error VL53L0X_GetNumberOfSequenceSteps(VL53L0X_DEV Dev,
 	uint8_t *pNumberOfSequenceSteps)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	LOG_FUNCTION_START("");
 
@@ -2099,6 +2112,8 @@ VL53L0X_Error VL53L0X_PerformSingleHistogramMeasurement(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)pHistogramMeasurementData;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -2125,6 +2140,10 @@ VL53L0X_Error VL53L0X_PerformXTalkMeasurement(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented on VL53L0X */
+	(void)Dev;
+	(void)TimeoutMs;
+	(void)pXtalkPerSpad;
+	(void)pAmbientTooHigh;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -2355,6 +2374,8 @@ VL53L0X_Error VL53L0X_WaitDeviceReadyForNewMeasurement(VL53L0X_DEV Dev,
 	LOG_FUNCTION_START("");
 
 	/* not implemented for VL53L0X */
+	(void)Dev;
+	(void)MaxLoop;
 
 	LOG_FUNCTION_END(Status);
 	return Status;
@@ -2542,6 +2563,9 @@ VL53L0X_Error VL53L0X_GetHistogramMeasurementData(VL53L0X_DEV Dev,
 	VL53L0X_Error Status = VL53L0X_ERROR_NOT_IMPLEMENTED;
 	LOG_FUNCTION_START("");
 
+	(void)Dev;
+	(void)pHistogramMeasurementData;
+
 	LOG_FUNCTION_END(Status);
 	return Status;
 }
@@ -2577,6 +2601,7 @@ VL53L0X_Error VL53L0X_PerformSingleRangingMeasurement(VL53L0X_DEV Dev,
 VL53L0X_Error VL53L0X_SetNumberOfROIZones(VL53L0X_DEV Dev,
 	uint8_t NumberOfROIZones)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 
 	LOG_FUNCTION_START("");
@@ -2592,6 +2617,7 @@ VL53L0X_Error VL53L0X_SetNumberOfROIZones(VL53L0X_DEV Dev,
 VL53L0X_Error VL53L0X_GetNumberOfROIZones(VL53L0X_DEV Dev,
 	uint8_t *pNumberOfROIZones)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 
 	LOG_FUNCTION_START("");
@@ -2605,6 +2631,7 @@ VL53L0X_Error VL53L0X_GetNumberOfROIZones(VL53L0X_DEV Dev,
 VL53L0X_Error VL53L0X_GetMaxNumberOfROIZones(VL53L0X_DEV Dev,
 	uint8_t *pMaxNumberOfROIZones)
 {
+	(void)Dev;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 
 	LOG_FUNCTION_START("");
@@ -2787,6 +2814,7 @@ VL53L0X_Error VL53L0X_SetInterruptThresholds(VL53L0X_DEV Dev,
 	VL53L0X_DeviceModes DeviceMode, FixPoint1616_t ThresholdLow,
 	FixPoint1616_t ThresholdHigh)
 {
+	(void)DeviceMode;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	uint16_t Threshold16;
 	LOG_FUNCTION_START("");
@@ -2811,6 +2839,7 @@ VL53L0X_Error VL53L0X_GetInterruptThresholds(VL53L0X_DEV Dev,
 	VL53L0X_DeviceModes DeviceMode, FixPoint1616_t *pThresholdLow,
 	FixPoint1616_t *pThresholdHigh)
 {
+	(void)DeviceMode;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	uint16_t Threshold16;
 	LOG_FUNCTION_START("");
@@ -2868,6 +2897,7 @@ VL53L0X_Error VL53L0X_GetStopCompletedStatus(VL53L0X_DEV Dev,
 /* Group PAL Interrupt Functions */
 VL53L0X_Error VL53L0X_ClearInterruptMask(VL53L0X_DEV Dev, uint32_t InterruptMask)
 {
+	(void)InterruptMask;
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 	uint8_t LoopCount;
 	uint8_t Byte;
@@ -2918,6 +2948,8 @@ VL53L0X_Error VL53L0X_EnableInterruptMask(VL53L0X_DEV Dev, uint32_t InterruptMas
 	LOG_FUNCTION_START("");
 
 	/* not implemented for VL53L0X */
+	(void)Dev;
+	(void)InterruptMask;
 
 	LOG_FUNCTION_END(Status);
 	return Status;

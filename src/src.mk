@@ -1,11 +1,18 @@
 
+INCDIR += ./ChibiOS_ext/os/hal/include
+
+INCDIR += ./ChibiOS_ext/os/hal/ports/STM32/STM32F4xx
+
 INCDIR += ./fatfs/src/
 
 INCDIR += src/
 
 
+CSRC += ./ChibiOS_ext/os/hal/ports/STM32/STM32F4xx/dcmi_lld.c
+CSRC += ./ChibiOS_ext/os/hal/src/dcmi.c
 CSRC += ./fatfs/src/ff.c
 CSRC += ./src/audio/audio_thread.c
+CSRC += ./src/camera/dcmi_camera.c
 CSRC += ./src/camera/po8030.c
 CSRC += ./src/cmd.c
 CSRC += ./src/epuck1x/Asercom.c
@@ -24,6 +31,7 @@ CSRC += ./src/sdcard.c
 CSRC += ./src/sensors/imu.c
 CSRC += ./src/sensors/mpu9250.c
 CSRC += ./src/sensors/proximity.c
+CSRC += ./src/spi_comm.c
 CSRC += ./src/usbcfg.c
 CSRC += ./src/utility.c
 CSRC += src/chibios-syscalls/malloc_lock.c

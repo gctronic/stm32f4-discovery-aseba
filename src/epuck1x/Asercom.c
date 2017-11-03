@@ -51,7 +51,7 @@ char buffer[3300]; //extern char buffer[BUFFER_SIZE];
 //extern int e_mic_scan[3][MIC_SAMP_NB];
 //extern unsigned int e_last_mic_scan_id;
 int selector; //extern int selector;
-int8_t c; //extern char c;
+char c;
 //extern int e_ambient_ir[10];						// ambient light measurement
 //extern int e_ambient_and_reflected_ir[10];		// light when led is on
 
@@ -62,18 +62,18 @@ int8_t c; //extern char c;
 
 int run_asercom(void) {
     static char c1, c2, wait_cam = 0;
-    static int i, j, n, speedr, speedl, positionr, positionl, LED_nbr, LED_action, accx, accy, accz, sound, gyrox, gyroy, gyroz;
-    static int cam_mode, cam_width, cam_heigth, cam_zoom, cam_size, cam_x1, cam_y1;
-    static char first = 0;
-    char *ptr;
-    static int mod, reg, val;
+    static int i, j, n, speedr, speedl, positionr, positionl, LED_nbr, LED_action, accx, accy, accz; //, sound, gyrox, gyroy, gyroz;
+    static int cam_mode, cam_width, cam_heigth, cam_zoom, cam_size; //, cam_x1, cam_y1;
+//    static char first = 0;
+//    char *ptr;
+//    static int mod, reg, val;
 #ifdef IR_RECEIVER
-    char ir_move = 0, ir_address = 0, ir_last_move = 0;
+//    char ir_move = 0, ir_address = 0, ir_last_move = 0;
 #endif
 //    static TypeAccSpheric accelero;
     //static TypeAccRaw accelero_raw;
     int use_bt = 0;
-    unsigned int battValue = 0;
+//    unsigned int battValue = 0;
 
     //e_init_port();    // configure port pins
     //e_start_agendas_processing();
@@ -262,7 +262,7 @@ int run_asercom(void) {
 
         //chnWriteTimeout(&SDU1, c, 1, TIME_INFINITE);
 
-        if (c < 0) { // binary mode (big endian)
+        if ((int8_t)c < 0) { // binary mode (big endian)
             i = 0;
             do {
                 switch (-c) {

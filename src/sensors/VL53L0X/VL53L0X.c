@@ -19,7 +19,6 @@ static THD_WORKING_AREA(waVL53L0XThd, 2048);
 static THD_FUNCTION(VL53L0XThd, arg) {
 
 	(void)arg;
-	uint8_t i = 0;
 	uint16_t value;
 	VL53L0X_Dev_t device;
 

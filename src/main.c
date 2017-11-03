@@ -35,13 +35,9 @@
 #include "diskio.h"
 #include "epuck1x/Asercom.h"
 #include "exti.h"
+#include "spi_comm.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
-
-#define SPI_COMMAND_SIZE 64
-#define SPI_DATA_HEADER_SIZE 4
-#define SPI_DATA_PAYLOAD_SIZE 4092
-#define SPI_DELAY 1200
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -51,31 +47,8 @@ parameter_namespace_t parameter_root, aseba_ns;
 
 static THD_WORKING_AREA(selector_thd_wa, 2048);
 
-uint8_t capture_mode = CAPTURE_ONE_SHOT;
-uint8_t *sample_buffer = NULL;
-uint8_t *sample_buffer2 = NULL;
-uint8_t double_buffering = 0;
-uint8_t camReady = 0;
-
 uint8_t txComplete = 0;
 uint8_t btnState = 0;
-uint8_t dcmiErrorFlag = 0;
-
-uint8_t spiRxBuff[SPI_COMMAND_SIZE];
-uint8_t spiTxBuff[SPI_COMMAND_SIZE];
-uint8_t spiHeader[SPI_DATA_HEADER_SIZE];
-
-event_source_t ss_event;
-
-void frameEndCb(DCMIDriver* dcmip);
-void dmaTransferEndCb(DCMIDriver* dcmip);
-void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err);
-const DCMIConfig dcmicfg = {
-    frameEndCb,
-    dmaTransferEndCb,
-	dcmiErrorCb,
-    DCMI_CR_PCKPOL
-};
 
 static bool load_config(void)
 {
@@ -113,235 +86,6 @@ void my_button_cb(void) {
 */	
 }
 
-void frameEndCb(DCMIDriver* dcmip) {
-    (void) dcmip;
-    //palTogglePad(GPIOD, 13) ; // Orange.
-}
-
-void dmaTransferEndCb(DCMIDriver* dcmip) {
-   (void) dcmip;
-    //palTogglePad(GPIOD, 15); // Blue.
-	//osalEventBroadcastFlagsI(&ss_event, 0);
-   camReady = 1;
-}
-
-void dcmiErrorCb(DCMIDriver* dcmip, dcmierror_t err) {
-   (void) dcmip;
-   (void) err;
-    dcmiErrorFlag = 1;
-	//chSysHalt("DCMI error");
-}
-
-/*
- * SPI image exchanger thread.
- */
-static THD_WORKING_AREA(spi_thread_wa, 1024);
-static THD_FUNCTION(spi_thread, p) {
-	(void)p;
-	chRegSetThreadName("SPI thread");
-	uint32_t i = 0;
-	//uint16_t transCount = 0; // image size / SPI_BUFF_LEN
-	uint8_t id = 0;
-	uint16_t checksum = 0;
-	volatile uint32_t delay = 0;	
-	uint16_t packetId = 0;
-	uint16_t numPackets = 0;
-	uint32_t remainingBytes = 0;
-	uint32_t spiDataIndex = 0;	
-	event_listener_t ss_listener;
-	//eventmask_t evt;	
-	
-	// Create a fixed command packet content for debugging.
-	// The first two bytes are fixed to 0xAA, 0xBB, this is for synchronization purposes with the ESP32.
-	// The last byte represents the checksum (block check character), this is also used for synchronization purposes.
-	// The command packet content will be ([index]value): [0]0xAA, [1]0xBB, [2]3, [3]4, [4]5, ..., [61]62, [62]63, [63]checksum.
-	spiTxBuff[0] = 0xAA;
-	checksum += spiTxBuff[0];
-	spiTxBuff[1] = 0xBB;
-	checksum += spiTxBuff[1];
-	for(i=2; i<SPI_COMMAND_SIZE-1; i++) {
-		spiTxBuff[i] = i+1;
-		checksum += spiTxBuff[i];
-	}
-	spiTxBuff[SPI_COMMAND_SIZE-1] = checksum&0xFF; // Block check character checksum.
-
-	// Create a fixed data packet content for debugging.
-	// The data packet content will be: 0, 1, ..., 254, 255, 0, 1, ..., 254, 255, 0, 1, ...
-	sample_buffer = malloc(76800);
-	id = 0;
-	for(i=0; i<76800; i++) {
-		sample_buffer[i] = id;
-		if(id == 255) {
-			id = 0;
-		} else {
-			id++;
-		}
-	}		
-	
-	chEvtRegister(&ss_event, &ss_listener, 0);
-	
-	//dcmiStartOneShot(&DCMID);
-	//chThdSleepMilliseconds(500);
-
-	while (true) {
-	
-		//evt = chEvtWaitAny(ALL_EVENTS);
-		
-		//if (evt & EVENT_MASK(0)) {
-
-			palSetPad(GPIOD, 13) ; // Orange.
-			palSetPad(GPIOD, 15); // Blue.
-			
-			memset(spiRxBuff, 0x00, SPI_COMMAND_SIZE);	
-			spiSelect(&SPID1);
-			//chThdSleepMilliseconds(1);
-			spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
-			//chThdSleepMilliseconds(1);
-			//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
-			spiUnselect(&SPID1);
-			
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			// Probably this pause can be avoided/reduced since we loose some time computing the checksum...	
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
-			}
-			
-			// Compute the checksum (block check character) to verify the command is received correctly.
-			// If the command is incorrect, wait for the next command, this is an easy way to synchronize the two chips.
-			checksum = 0;
-			for(i=0; i<SPI_COMMAND_SIZE-1; i++) {
-				checksum += spiRxBuff[i];
-			}
-			checksum = checksum &0xFF;
-			// The checksum coupled with the two fixed bytes increase the probability that the command packet is identified correctly.
-			if(checksum != spiRxBuff[SPI_COMMAND_SIZE-1] || spiRxBuff[0]!=0xAA || spiRxBuff[1]!=0xBB) {	
-				//chprintf((BaseSequentialStream *)&SDU1, "F:%.3d %.3d %.3d %.3d %.3d %.3d %.3d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[2], spiRxBuff[3], spiRxBuff[SPI_COMMAND_SIZE-3], spiRxBuff[SPI_COMMAND_SIZE-2], spiRxBuff[SPI_COMMAND_SIZE-1]);			
-				//chThdSleepMilliseconds(1); // Give time to the ESP32 to be listening.
-				continue;
-			}
-					
-			palClearPad(GPIOD, 15); // Blue.
-			
-			/*
-			spiSelect(&SPID1);
-			spiExchange(&SPID1, SPI_COMMAND_SIZE, spiTxBuff, spiRxBuff);
-			//spiReceive(&SPID1, SPI_COMMAND_SIZE, spiRxBuff);
-			spiUnselect(&SPID1);
-			
-			// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-			// Probably this pause can be avoided since we loose some time computing the checksum...	
-			for(delay=0; delay<SPI_DELAY; delay++) {
-				__NOP();
-			}		
-			*/
-			
-			// Modify the packet content in order to test the exchange of a dynamic payload instead of a fixed one.
-			/*
-			if(spiTxBuff[0] >= SPI_COMMAND_SIZE*0) {
-				for(i=0; i<SPI_COMMAND_SIZE; i++) {
-					spiTxBuff[i] = i;
-				}
-			} else {
-				for(i=0; i<SPI_COMMAND_SIZE; i++) {
-					spiTxBuff[i] += SPI_COMMAND_SIZE;
-				}		
-			}
-			*/
-
-			numPackets = 76800/SPI_DATA_PAYLOAD_SIZE;
-			remainingBytes = 76800%SPI_DATA_PAYLOAD_SIZE;
-			spiDataIndex = 0;	
-
-			for(packetId=0; packetId<numPackets; packetId++) {
-				/*
-				spiHeader[0] = packetId&0xFF;
-				spiHeader[1] = packetId>>8;
-				spiHeader[2] = SPI_DATA_PAYLOAD_SIZE&0xFF;
-				spiHeader[3] = SPI_DATA_PAYLOAD_SIZE>>8;
-				
-				spiSelect(&SPID1);
-				spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
-				spiUnselect(&SPID1);
-				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-				for(delay=0; delay<SPI_DELAY; delay++) {
-					__NOP();
-				}			
-				*/
-							
-				spiSelect(&SPID1);
-				//chThdSleepMilliseconds(1);
-				spiSend(&SPID1, SPI_DATA_PAYLOAD_SIZE, &sample_buffer[spiDataIndex]);
-				//chThdSleepMilliseconds(1);
-				spiUnselect(&SPID1);
-				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-				for(delay=0; delay<SPI_DELAY; delay++) {
-					__NOP();
-				}			
-
-				spiDataIndex += SPI_DATA_PAYLOAD_SIZE;
-			}
-			if(remainingBytes > 0) {
-				/*
-				spiHeader[0] = packetId&0xFF;
-				spiHeader[1] = packetId>>8;
-				spiHeader[2] = remainingBytes&0xFF;
-				spiHeader[3] = remainingBytes>>8;
-				
-				spiSelect(&SPID1);
-				spiSend(&SPID1, SPI_DATA_HEADER_SIZE, spiHeader);
-				spiUnselect(&SPID1);
-				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-				for(delay=0; delay<SPI_DELAY; delay++) {
-					__NOP();
-				}
-				*/
-							
-				spiSelect(&SPID1);
-				//palSetPad(GPIOD, 15); // Blue.
-				//chThdSleepMilliseconds(1);
-				spiSend(&SPID1, remainingBytes, &sample_buffer[spiDataIndex]);
-				//chThdSleepMilliseconds(1);
-				//palClearPad(GPIOD, 15); // Blue.
-				spiUnselect(&SPID1);
-				
-				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-				for(delay=0; delay<SPI_DELAY; delay++) {
-					__NOP();
-				}
-			}		
-			
-			/*
-			for(transCount=0; transCount<76800/SPI_PACKET_SIZE; transCount++) {
-				spiSelect(&SPID1);
-				spiSend(&SPID1, SPI_PACKET_SIZE, &sample_buffer[transCount*SPI_PACKET_SIZE]);
-				spiUnselect(&SPID1);
-				// A little pause is needed for the communication to work, 400 NOP loops last about 26 us.
-				for(delay=0; delay<SPI_DELAY; delay++) {
-					__NOP();
-				}
-			}
-			*/
-			
-			
-			palClearPad(GPIOD, 13) ; // Orange.
-			
-			//chprintf((BaseSequentialStream *)&SDU1, "recv: %d, %d, %d, %d, %d, %d, %d\r\n", spiRxBuff[0], spiRxBuff[1], spiRxBuff[2], spiRxBuff[3], spiRxBuff[SPI_COMMAND_SIZE-3], spiRxBuff[SPI_COMMAND_SIZE-2], spiRxBuff[SPI_COMMAND_SIZE-1]);		
-			//chprintf((BaseSequentialStream *)&SDU1, "n=%d, r=%d\r\n", numPackets, remainingBytes);			
-			
-			//chThdSleepMilliseconds(50);
-			//dcmiStartOneShot(&DCMID);
-			//chThdSleepMilliseconds(500);
-			
-		//} // Event handling.
-		
-		//break;
-		
-	} // Infinite loop.
-	
-	free(sample_buffer);
-	
-}
-
 void adc_start(void) {
     adcStart(&ADCD2, NULL);
 }
@@ -374,8 +118,6 @@ static THD_FUNCTION(selector_thd, arg)
 
     messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
     imu_msg_t imu;
-	int16_t gyro[3];
-	int16_t acc[3];
 
     messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t proximity;
@@ -388,15 +130,10 @@ static THD_FUNCTION(selector_thd, arg)
 	uint8_t sdState = 0;
 	FRESULT fr;
 	FIL fil;
-	FATFS fs;           // Filesystem object.
+//	FATFS fs;           // Filesystem object.
 	//BYTE work[1024]; /* Work area (larger is better for processing time) */
-	int rc;
+//	int rc;
 	//DWORD buff[512];  /* 2048 byte working buffer */
-
-    //char myChar;
-    int8_t myChar;
-    //static char myCharArr[64];
-    //char myCharArr2[3] = {'a', 'b', 'c'};
 
     while(1) {
 		switch(get_selector()) {
@@ -573,40 +310,23 @@ static THD_FUNCTION(selector_thd, arg)
 
 			case 12:
 				run_asercom();
-
-				// OK
-//				if(e_getchar_uart2(&myChar)	 > 0) {
-//				if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) { // MS2ST(10)
-//				if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//				if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
-//					chSequentialStreamPut(&SDU1, myChar);
-//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-//					chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
-//				}
-
-//				if(e_getchar_uart2(&myChar)	 > 0) {
-//				//if(chSequentialStreamRead(&SDU1, &myChar, 1) > 0) {
-//				//if(sdReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
-//				//if(sdReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//				//if(chnReadTimeout(&SDU1, myCharArr, 64, MS2ST(10)) > 0) {
-//				//if(chnReadTimeout(&SDU1, &myChar, 1, MS2ST(1)) > 0) {
-//				//if(chnReadTimeout(&SDU1, &myChar, 1, TIME_IMMEDIATE) > 0) {
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar[0]);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", myChar);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%c\r\n", myChar);
-//					//chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", 4);
-//					//chprintf(&SDU1, "%c\r\n", myChar);
-//					//chSequentialStreamPut(&SDU1, myChar);
-//					chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-//					//chnWriteTimeout(&SDU1, (uint8_t*)myCharArr2, 3, TIME_INFINITE);
-//				}
-
-//				while(e_getchar_uart2(&myChar) == 0);
-//				chnWriteTimeout(&SDU1, (uint8_t*)&myChar, 1, TIME_INFINITE);
-
 				break;
 
 			case 13:
+			    /* Configure PO8030 camera. */
+			//    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
+			//        dcmiErrorFlag = 1;
+			//    }
+				/*
+				capture_mode = CAPTURE_ONE_SHOT;
+				double_buffering = 0;
+				po8030_save_current_format(FORMAT_YYYY);
+				po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
+				po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
+				sample_buffer = (uint8_t*)malloc(po8030_get_image_size());
+				dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
+				//dcmiStartOneShot(&DCMID);
+				*/
 				break;
 
 			case 14:
@@ -631,18 +351,20 @@ int main(void)
 
     parameter_namespace_declare(&parameter_root, NULL, NULL);
 
-	sdStart(&SD3, NULL); // UART3.
-	usb_start();
-	i2c_start();
 	clear_leds();
 	set_body_led(0);
 	set_front_led(0);
+	sdStart(&SD3, NULL); // UART3.
+	usb_start();
+	i2c_start();
+	dcmi_start();
 	imu_start();
 	adc_start();
 	proximity_start();
 	dac_start();
 	motors_init();
 	exti_start();
+	spi_comm_start();
 	
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
@@ -674,42 +396,7 @@ int main(void)
     //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    //shell_start();
-
-    /* Configure PO8030 camera. */
-//    if(po8030_config(FORMAT_YCBYCR, SIZE_QQVGA) != MSG_OK) { // Default configuration.
-//        dcmiErrorFlag = 1;
-//    }
-	/*
-	capture_mode = CAPTURE_ONE_SHOT;
-	double_buffering = 0;
-	po8030_save_current_format(FORMAT_YYYY);
-	po8030_save_current_subsampling(SUBSAMPLING_X1, SUBSAMPLING_X1);
-	po8030_advanced_config(FORMAT_YYYY, 1, 1, 320, 240, SUBSAMPLING_X1, SUBSAMPLING_X1);
-	sample_buffer = (uint8_t*)malloc(po8030_get_image_size());
-	dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
-	//dcmiStartOneShot(&DCMID);
-	*/
-
-//	osalEventObjectInit(&ss_event);
-	
-	/*
-	* SPI1 maximum speed is 42 MHz, ESP32 supports at most 10MHz, so use a prescaler of 1/8 (84 MHz / 8 = 10.5 MHz).
-	* SPI1 configuration (10.5 MHz, CPHA=0, CPOL=0, MSb first).
-	*/	
-//	static const SPIConfig hs_spicfg = {
-//		NULL,
-//		GPIOA,
-//		15,
-//		SPI_CR1_BR_1
-//		//SPI_CR1_BR_1 | SPI_CR1_BR_0 // 5.25 MHz
-//	};		
-//	spiStart(&SPID1, &hs_spicfg);       /* Setup transfer parameters. */
-	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
-	//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO + 1, spi_thread, NULL);
-
-//    uint16_t camId = 0;
-//	po8030_read_id(&camId);
+    shell_start();
 
     chThdSleepMilliseconds(5000);
 
@@ -722,29 +409,11 @@ int main(void)
 		//set_body_led(2);
 		//set_front_led(2);
 		
-        // Led toggled to verify main is running and to show DCMI state.
-        if(dcmiErrorFlag == 1) {
-			//e_set_led(0, 0);
-			//e_set_led(2, 2);
-        } else {
-			//e_set_led(0, 2);
-			//e_set_led(2, 0);
-        }
-
-        //chprintf((BaseSequentialStream *)&SDU1, "%d\r\n", dmaStreamGetTransactionSize(DCMID.dmastp));
-
-		
         if(txComplete == 1) {
             txComplete = 0;
 			
 			chThdSleepMilliseconds(5000);
-			
-			//chThdCreateStatic(spi_thread_wa, sizeof(spi_thread_wa), NORMALPRIO, spi_thread, NULL);
 
-            //palClearPad(GPIOD, 15); // Blue.
-            //palClearPad(GPIOD, 13) ; // Orange.
-
-			
             if(capture_mode == CAPTURE_ONE_SHOT) {
                 chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
             } else {

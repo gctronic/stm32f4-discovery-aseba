@@ -8,6 +8,7 @@
 #include "..\sensors\proximity.h"
 #include "..\main.h"
 #include "..\camera\po8030.h"
+#include "..\camera\dcmi_camera.h"
 
 // LEDs handling.
 void e_set_led(unsigned int led_number, unsigned int value) {
@@ -41,10 +42,13 @@ int  e_ischar_uart1(void) {
 }
 
 int  e_getchar_uart1(char *car) {
+	(void)car;
 	return 0;
 }
 
 void e_send_uart1_char(const char * buff, int length) {
+	(void)buff;
+	(void)length;
 	return;
 }
 
@@ -53,6 +57,7 @@ int  e_uart1_sending(void) {
 }
 
 void e_init_uart2(int baud) {
+	(void)baud;
 	return;
 }
 
@@ -64,14 +69,15 @@ int  e_getchar_uart2(char *car) {
 	if (SDU1.config->usbp->state == USB_ACTIVE) {
 		//return chnReadTimeout(&SDU1, car, 1, TIME_IMMEDIATE);
 		//return chnReadTimeout(&SDU1, car, 1, MS2ST(10));
-		return chSequentialStreamRead(&SDU1, car, 1);
+		return chSequentialStreamRead(&SDU1, (uint8_t*)car, 1);
 	}
+	return 0;
 }
 
 void e_send_uart2_char(const char * buff, int length) {
 	if (SDU1.config->usbp->state == USB_ACTIVE) {
 		//chnWriteTimeout(&SDU1, (uint8_t*)buff, length, TIME_INFINITE);
-		chSequentialStreamWrite(&SDU1, buff, length);
+		chSequentialStreamWrite(&SDU1, (uint8_t*)buff, length);
 	}
 }
 
@@ -106,10 +112,12 @@ void e_set_speed(int linear_speed, int angular_speed) {
 }
 
 void e_set_steps_left(int steps_left) {
+	(void)steps_left;
 	return;
 }
 
 void e_set_steps_right(int steps_right) {
+	(void)steps_right;
 	return;
 }
 
@@ -150,7 +158,7 @@ int e_poxxxx_init_cam(void) {
 	po8030_save_current_subsampling(SUBSAMPLING_X4, SUBSAMPLING_X4);
 	po8030_advanced_config(FORMAT_RGB565, 240, 160, 160, 160, SUBSAMPLING_X4, SUBSAMPLING_X4);
 	sample_buffer = (uint8_t*)malloc(po8030_get_image_size());
-	dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
+	dcmi_prepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
 
 	return 0x8030;
 }
@@ -159,6 +167,13 @@ int e_poxxxx_config_cam(unsigned int sensor_x1,unsigned int sensor_y1,
 			 unsigned int sensor_width,unsigned int sensor_height,
 			 unsigned int zoom_fact_width,unsigned int zoom_fact_height,
 			 int color_mode) {
+	(void)sensor_x1;
+	(void)sensor_y1;
+	(void)sensor_width;
+	(void)sensor_height;
+	(void)zoom_fact_width;
+	(void)zoom_fact_height;
+	(void)color_mode;
 	return 0;
 }
 
@@ -167,8 +182,8 @@ void e_poxxxx_write_cam_registers(void) {
 }
 
 void e_poxxxx_launch_capture(char * buf) {
-	camReady = 0;
-	dcmiStartOneShot(&DCMID);
+	(void)buf;
+	dcmi_start_one_shot(&DCMID);
 }
 
 /*! Check if the current capture is finished
@@ -176,5 +191,5 @@ void e_poxxxx_launch_capture(char * buf) {
  * \sa e_poxxxx_launch_capture
  */
 int e_poxxxx_is_img_ready(void) {
-	return camReady;
+	return image_is_ready();
 }
