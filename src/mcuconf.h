@@ -43,8 +43,8 @@
 #define STM32_LSE_ENABLED                   FALSE
 #define STM32_CLOCK48_REQUIRED              TRUE
 #define STM32_SW                            STM32_SW_PLL // SYSCLK source is PLL.
-#define STM32_PLLSRC                        STM32_PLLSRC_HSE // 8 MHz.
-#define STM32_PLLM_VALUE                    8 // VCO input freq = 8/PLLM = 1 MHz // (define STM32_SYSCLK)
+#define STM32_PLLSRC                        STM32_PLLSRC_HSE // 24 MHz.
+#define STM32_PLLM_VALUE                    24 // VCO input freq = 8/PLLM = 1 MHz // (define STM32_SYSCLK)
 #define STM32_PLLN_VALUE                    336 // VCO output freq = VCO input * PLLN = 336 MHz
 #define STM32_PLLP_VALUE                    2 // Main PLL clock = VCO output / PLLP = 336/2 = 168 MHz
 #define STM32_PLLQ_VALUE                    7 // USB, SDIO clock = VCO outpu / PLLQ = 48 MHz
