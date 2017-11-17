@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "ch.h"
 #include "hal.h"
 #include "chprintf.h"
@@ -28,6 +29,7 @@
 #include "i2c_bus.h"
 #include "sensors/proximity.h"
 #include "audio/audio_thread.h"
+#include "audio/microphone.h"
 #include "sensors/VL53L0X/VL53L0X.h"
 #include "motor.h"
 #include "sdcard.h"
@@ -116,16 +118,27 @@ static THD_FUNCTION(selector_thd, arg)
     (void) arg;
     chRegSetThreadName(__FUNCTION__);
 
-    messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
+    systime_t time;
+
+    messagebus_topic_t *imuTopic; // = messagebus_find_topic_blocking(&bus, "/imu");
     imu_msg_t imu;
 
-    messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
+    messagebus_topic_t *proxTopic; // = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t proximity;
 	signed int leftSpeed=0, rightSpeed=0;
 
 	uint8_t playing = 0;
 
 	uint8_t tof_measuring = 0;
+
+	uint8_t rab_addr = 0x20;
+	uint8_t rab_state = 0;
+	int8_t i2c_err = 0;
+	uint8_t regValue[2] = {0};
+	uint16_t rab_data = 0;
+	double rab_bearing = 0.0;
+	uint16_t rab_range = 0;
+	uint16_t rab_sensor = 0;
 
 	uint8_t sdState = 0;
 	FRESULT fr;
@@ -135,7 +148,12 @@ static THD_FUNCTION(selector_thd, arg)
 //	int rc;
 	//DWORD buff[512];  /* 2048 byte working buffer */
 
+	uint8_t toEsp32 = 'c', fromEsp32 = 0;
+	int16_t len = 0;
+
     while(1) {
+    	time = chVTGetSystemTime();
+
 		switch(get_selector()) {
 			case 0: // Read IMU raw senosrs values.
 		    	messagebus_topic_wait(imuTopic, &imu, sizeof(imu));
@@ -143,6 +161,7 @@ static THD_FUNCTION(selector_thd, arg)
 		    		continue;
 		    	}
 		    	chprintf((BaseSequentialStream *)&SDU1, "%Ax=%-7d Ay=%-7d Az=%-7d Gx=%-7d Gy=%-7d Gz=%-7d\r\n", imu.acc_raw[0], imu.acc_raw[1], imu.acc_raw[2], imu.gyro_raw[0], imu.gyro_raw[1], imu.gyro_raw[2]);
+		    	chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 1: // Read acceleration and rotation speeed (rad/s).
@@ -151,6 +170,7 @@ static THD_FUNCTION(selector_thd, arg)
 		    		continue;
 		    	}
 		    	chprintf((BaseSequentialStream *)&SDU1, "%Ax=%-7.3f Ay=%-7.3f Az=%-7.3f Gx=%-6.3f Gy=%-6.3f Gz=%-6.3f\r\n", imu.acceleration[0], imu.acceleration[1], imu.acceleration[2], imu.gyro[0], imu.gyro[1], imu.gyro[2]);
+		    	chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 2: // Led toggling.
@@ -160,6 +180,7 @@ static THD_FUNCTION(selector_thd, arg)
 				set_led(3, 2);
 				set_body_led(2);
 				set_front_led(2);
+				chThdSleepUntilWindowed(time, time + MS2ST(500)); // Refresh @ 2 Hz.
 				break;
 
 			case 3: // Read proximity sensors.
@@ -189,6 +210,7 @@ static THD_FUNCTION(selector_thd, arg)
 		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
 		        }
 		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+		        chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 4:
@@ -197,6 +219,7 @@ static THD_FUNCTION(selector_thd, arg)
 					dac_play(200);
 					playing = 1;
 				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 5:
@@ -205,6 +228,7 @@ static THD_FUNCTION(selector_thd, arg)
 					dac_play(2000);
 					playing = 1;
 				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 6:
@@ -213,6 +237,7 @@ static THD_FUNCTION(selector_thd, arg)
 					dac_play(10000);
 					playing = 1;
 				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 7:
@@ -220,11 +245,13 @@ static THD_FUNCTION(selector_thd, arg)
 					tof_measuring = 1;
 					VL53L0X_init_demo();
 				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 8:
 				right_motor_set_speed(2200);
 				left_motor_set_speed(-2200);
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 9:
@@ -286,6 +313,7 @@ static THD_FUNCTION(selector_thd, arg)
 						*/
 						break;
 				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
 			case 10:
@@ -306,10 +334,12 @@ static THD_FUNCTION(selector_thd, arg)
 				rightSpeed = 2000 - proximity.delta[7]*4 - proximity.delta[6]*2;
 				right_motor_set_speed(rightSpeed);
 				left_motor_set_speed(leftSpeed);
+				chThdSleepUntilWindowed(time, time + MS2ST(10)); // Refresh @ 100 Hz.
 				break;
 
 			case 12:
 				run_asercom();
+				chThdSleepUntilWindowed(time, time + MS2ST(10)); // Refresh @ 100 Hz.
 				break;
 
 			case 13:
@@ -329,13 +359,66 @@ static THD_FUNCTION(selector_thd, arg)
 				*/
 				break;
 
-			case 14:
+			case 14: // ESP32 UART communication test.
+				sdPut(&SD3, toEsp32);
+				len = sdReadTimeout(&SD3, &fromEsp32, 1, MS2ST(50));
+				if(len > 0) {
+					sdPut(&SDU1, fromEsp32);
+				}
+				chThdSleepUntilWindowed(time, time + MS2ST(10)); // Refresh @ 100 Hz.
 				break;
 
-			case 15:
+			case 15: // Range and bearing testing.
+				switch(rab_state) {
+					case 0:
+						write_reg(rab_addr, 12, 150); // Set range.
+						if((i2c_err = read_reg(rab_addr, 12, &regValue[0])) == MSG_OK) {
+						   	chprintf((BaseSequentialStream *)&SDU1, "set range to %d\r\n", regValue[0]);
+						}
+						write_reg(rab_addr, 17, 1); // Onboard calculation.
+						if((i2c_err = read_reg(rab_addr, 12, &regValue[0])) == MSG_OK) {
+							chprintf((BaseSequentialStream *)&SDU1, "onboard calculation enabled = %d\r\n", regValue[0]);
+						}
+						write_reg(rab_addr, 16, 0); // Store light conditions.
+						rab_state = 1;
+						break;
+
+					case 1:
+					    if((i2c_err = read_reg(rab_addr, 0, &regValue[0])) != MSG_OK) {
+					    	chprintf((BaseSequentialStream *)&SDU1, "err\r\n");
+					        break;
+					    }
+					    chprintf((BaseSequentialStream *)&SDU1, "recv = %d\r\n", regValue[0]);
+					    if(regValue[0] != 0) {
+					    	read_reg(rab_addr, 1, &regValue[0]);
+							read_reg(rab_addr, 2, &regValue[1]);
+							rab_data = (((uint16_t)regValue[0])<<8) + regValue[1];
+
+					    	read_reg(rab_addr, 3, &regValue[0]);
+							read_reg(rab_addr, 4, &regValue[1]);
+							rab_bearing = ((double)((((uint16_t)regValue[0])<<8) + regValue[1])) * 0.0001;
+
+					    	read_reg(rab_addr, 5, &regValue[0]);
+							read_reg(rab_addr, 6, &regValue[1]);
+							rab_range = (((uint16_t)regValue[0])<<8) + regValue[1];
+
+							read_reg(rab_addr, 9, &regValue[0]);
+							rab_sensor = regValue[0];
+
+							if (SDU1.config->usbp->state != USB_ACTIVE) { // Skip printing if port not opened.
+								break;
+							}
+
+							chprintf((BaseSequentialStream *)&SDU1, "%d %f %d %d\r\n", rab_data, (rab_bearing*180/M_PI), rab_range, rab_sensor);
+					    }
+
+					    write_reg(rab_addr, 13, 0x00);
+					    write_reg(rab_addr, 14, 0xFF);
+						break;
+				}
+				chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 		}
-    	chThdSleepMilliseconds(10);
     }
 }
 
@@ -354,18 +437,28 @@ int main(void)
 	clear_leds();
 	set_body_led(0);
 	set_front_led(0);
-	sdStart(&SD3, NULL); // UART3.
+	static SerialConfig ser_cfg = {
+	    2500000,
+	    0,
+	    0,
+	    0,
+	};
+	sdStart(&SD3, &ser_cfg); // UART3.
 	usb_start();
 	i2c_start();
 	dcmi_start();
-	imu_start();
+	po8030_start();
+	//imu_start();
 	adc_start();
-	proximity_start();
+	//proximity_start();
 	dac_start();
 	motors_init();
 	exti_start();
 	spi_comm_start();
+	mic_start();
 	
+	//i2cStop(&I2CD1);
+
     // Initialise Aseba system, declaring parameters
     //parameter_namespace_declare(&aseba_ns, &parameter_root, "aseba");
     //aseba_declare_parameters(&aseba_ns);

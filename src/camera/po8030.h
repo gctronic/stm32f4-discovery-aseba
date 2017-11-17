@@ -123,6 +123,7 @@ struct po8030_configuration {
 	subsampling_t 	curr_subsampling_y;
 };
 
+void po8030_start(void);
 int8_t po8030_read_id(uint16_t *id);
 int8_t po8030_set_bank(uint8_t bank);
 int8_t po8030_set_format(format_t fmt);

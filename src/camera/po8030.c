@@ -33,6 +33,25 @@ subsampling_t po8030_get_saved_subsampling_y(void) {
 }
 /**********************************************************************/
 
+void po8030_start(void) {
+    /* timer init */
+    static const PWMConfig pwmcfg_cam = {
+        .frequency = 42000000,
+        .period = 0x02,
+        .cr2 = 0,
+        .callback = NULL,
+        .channels = {
+            // Channel 1 is used as master clock for the camera.
+            {.mode = PWM_OUTPUT_ACTIVE_HIGH, .callback = NULL},
+            {.mode = PWM_OUTPUT_DISABLED, .callback = NULL},
+            {.mode = PWM_OUTPUT_DISABLED, .callback = NULL},
+            {.mode = PWM_OUTPUT_DISABLED, .callback = NULL},
+        },
+    };
+    pwmStart(&PWMD5, &pwmcfg_cam);
+    pwmEnableChannel(&PWMD5, 0, 1); // Enable channel 1 to clock the camera.
+}
+
 int8_t po8030_read_id(uint16_t *id) {
     uint8_t regValue[2] = {0};
     int8_t err = 0;

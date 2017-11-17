@@ -251,7 +251,7 @@
  * PA14 - SWCLK                     (alternate 0).
  * PA15 - SPI1 CS ESP32				(output pushpull maximum).
  */
-#define VAL_GPIOA_MODER             (PIN_MODE_INPUT(GPIOA_PIN0) |         	\
+#define VAL_GPIOA_MODER             (PIN_MODE_ALTERNATE(GPIOA_PIN0) |         	\
                                      PIN_MODE_ANALOG(GPIOA_BATT_AN) |		\
                                      PIN_MODE_ALTERNATE(GPIOA_MIC_TIMER_IN) | \
                                      PIN_MODE_ALTERNATE(GPIOA_MIC_TIMER_OUT) | \
@@ -299,7 +299,7 @@
                                      PIN_OSPEED_100M(GPIOA_SWDIO) |         \
                                      PIN_OSPEED_100M(GPIOA_SWCLK) |         \
                                      PIN_OSPEED_100M(GPIOA_SPI1_CS_ESP32))
-#define VAL_GPIOA_PUPDR             (PIN_PUPDR_FLOATING(GPIOA_PIN0) |     	\
+#define VAL_GPIOA_PUPDR             (PIN_PUPDR_PULLUP(GPIOA_PIN0) |     	\
                                      PIN_PUPDR_FLOATING(GPIOA_BATT_AN) |	\
                                      PIN_PUPDR_FLOATING(GPIOA_MIC_TIMER_IN) | \
                                      PIN_PUPDR_FLOATING(GPIOA_MIC_TIMER_OUT) | \
@@ -331,7 +331,7 @@
                                      PIN_ODR_HIGH(GPIOA_SWDIO) |            \
                                      PIN_ODR_HIGH(GPIOA_SWCLK) |            \
                                      PIN_ODR_HIGH(GPIOA_SPI1_CS_ESP32))
-#define VAL_GPIOA_AFRL              (PIN_AFIO_AF(GPIOA_PIN0, 0) |         	\
+#define VAL_GPIOA_AFRL              (PIN_AFIO_AF(GPIOA_PIN0, 2) |         	\
                                      PIN_AFIO_AF(GPIOA_BATT_AN, 0) |		\
                                      PIN_AFIO_AF(GPIOA_MIC_TIMER_IN, 3) |	\
                                      PIN_AFIO_AF(GPIOA_MIC_TIMER_OUT, 3) |	\

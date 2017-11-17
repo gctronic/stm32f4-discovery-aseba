@@ -23,7 +23,9 @@ source:
     - src/sensors/VL53L0X/Api/core/src/vl53l0x_api_strings.c
     - src/sensors/VL53L0X/Api/platform/src/vl53l0x_i2c_platform.c
     - src/sensors/VL53L0X/Api/platform/src/vl53l0x_platform.c
-
+    - src/msgbus/examples/chibios/port.c
+    - src/msgbus/messagebus.c
+    
 tests:
     - tests/config_save_test.cpp
     - tests/flash_mock.cpp
@@ -55,6 +57,8 @@ target.arm:
     - src/epuck1x/Asercom.c
     - src/exti.c
     - src/spi_comm.c
-
+    - src/audio/microphone.c
+    - src/audio/mp45dt02_processing.c
+    
 templates:
     src/src.mk.jinja: src/src.mk
