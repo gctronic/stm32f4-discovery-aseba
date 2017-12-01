@@ -8,6 +8,7 @@ extern "C" {
 void audio_start(uint16_t freq);
 void dac_start(void);
 void dac_play(uint16_t freq);
+void dac_stop(void);
 
 #ifdef __cplusplus
 }

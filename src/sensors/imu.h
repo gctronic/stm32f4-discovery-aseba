@@ -15,6 +15,7 @@ typedef struct {
     int16_t gyro_raw_offset[3];
     int16_t acc_raw_filtered[3];
     int16_t gyro_raw_filtered[3];
+    uint8_t status;
 } imu_msg_t;
 
 /** Starts the Inertial Motion Unit (IMU) publisher. */

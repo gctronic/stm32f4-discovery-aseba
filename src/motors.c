@@ -1,6 +1,6 @@
 #include <ch.h>
 #include <hal.h>
-#include "motor.h"
+#include "motors.h"
 #include "leds.h"
 
 static const uint8_t step_halt[4] = {0, 0, 0, 0};

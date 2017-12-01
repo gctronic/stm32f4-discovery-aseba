@@ -1,8 +1,9 @@
 #include <ch.h>
 #include <hal.h>
 #include "audio_thread.h"
-//#include "audio_dac.h"
 
+#define STATE_STOPPED 0
+#define STATE_PLAYING 1
 #define DAC_BUFFER_SIZE2 360
 
 /*
@@ -43,34 +44,7 @@ static const dacsample_t dac_buffer[DAC_BUFFER_SIZE2] = {
 
 static DACConversionGroup dac_conversion;
 
-// bool sine_read_cb(void *arg, audio_sample_t *buffer, size_t buf_len, size_t *samples_written) {
-	// buffer = dac_buffer;
-	// *samples_written = 360;
-	// return true;
-// }
-
-// void audio_start(uint16_t freq) {
-	// palSetPad(GPIOD, GPIOD_AUDIO_PWR);
-	// audio_dac_convert(sine_read_cb, NULL, freq*360, dac_buffer, 360);
-// }
-
-/*
- * DAC streaming callback.
- */
-size_t nx = 0, ny = 0, nz = 0;
-static void end_cb1(DACDriver *dacp, const dacsample_t *buffer, size_t n) {
-
-  (void)dacp;
-
-  nz++;
-  if (dac_buffer == buffer) {
-    nx += n;
-  }
-  else {
-    ny += n;
-  }
-
-}
+static uint8_t dac_state = STATE_STOPPED;
 
 /*
  * DAC error callback.
@@ -83,25 +57,18 @@ static void error_cb(DACDriver *dacp, dacerror_t err) {
   chSysHalt("DAC failure");
 }
 
-void dac_start(void) 
-{
-	//palSetPad(GPIOD, GPIOD_AUDIO_PWR); // Turn off audio.
-	palClearPad(GPIOD, GPIOD_AUDIO_PWR); // Turn on audio.
-	
+void dac_start(void)  {
     dac_conversion.num_channels = 1U;
-    dac_conversion.end_cb = end_cb1; //NULL
+    dac_conversion.end_cb = NULL;
     dac_conversion.error_cb = error_cb;
     dac_conversion.trigger = DAC_TRG(0); // Timer 6 TRGO event.
 
     static DACConfig dac_config;
-    dac_config.init = 2047; //0
-    dac_config.datamode = DAC_DHRM_12BIT_RIGHT; //DAC_DHRM_12BIT_LEFT
+    dac_config.init = 2048; // Set start value to half of the range.
+    dac_config.datamode = DAC_DHRM_12BIT_RIGHT;
 
     dacStart(&DACD2, &dac_config);
-}
 
-void dac_play(uint16_t freq) {
-	
     /* start timer for DAC trigger */
 	static GPTConfig config;
     config.frequency = STM32_TIMCLK1; /* run timer at full frequency */
@@ -110,12 +77,27 @@ void dac_play(uint16_t freq) {
     config.dier = 0U;
 	
     gptStart(&GPTD6, &config);
-
-	dacStartConversion(&DACD2, &dac_conversion, dac_buffer, DAC_BUFFER_SIZE2);	
-	
-    gptStartContinuous(&GPTD6, STM32_TIMCLK1 / (freq*DAC_BUFFER_SIZE2) ); /* rounded divider */
-	
 }
+
+void dac_play(uint16_t freq) {
+	if(dac_state == STATE_STOPPED) {
+		dac_state = STATE_PLAYING;
+		palClearPad(GPIOD, GPIOD_AUDIO_PWR); // Turn on audio.
+		dacStartConversion(&DACD2, &dac_conversion, dac_buffer, DAC_BUFFER_SIZE2);
+		gptStartContinuous(&GPTD6, STM32_TIMCLK1 / (freq*DAC_BUFFER_SIZE2));
+	} else {
+		gptChangeInterval(&GPTD6, STM32_TIMCLK1 / (freq*DAC_BUFFER_SIZE2));
+	}
+}
+
+void dac_stop(void) {
+	palSetPad(GPIOD, GPIOD_AUDIO_PWR); // Turn off audio.
+    gptStopTimer(&GPTD6);
+    dacStopConversion(&DACD2);
+	dac_state = STATE_STOPPED;
+}
+
+
 
 
 

@@ -45,10 +45,12 @@ int8_t mpu9250_setup(int config) {
     }
     chThdSleepMilliseconds(1);
 
-//    // enable interrupts: data ready
-//    mpu60X0_reg_write(dev, MPU60X0_RA_INT_ENABLE, MPU60X0_INTERRUPT_DATA_RDY);
-//    chThdSleepMilliseconds(1);
-//
+    // Enable interrupts: data ready.
+    if((err = write_reg(MPU9250_ADDRESS, INT_ENABLE, INTERRUPT_DATA_RDY)) != MSG_OK) {
+        return err;
+    }
+    chThdSleepMilliseconds(1);
+
 //    // low pass filter config, FSYNC disabled
 //    mpu60X0_reg_write(dev, MPU60X0_RA_CONFIG, (config >> 16) & 0x07);
 //    chThdSleepMilliseconds(1);
@@ -76,7 +78,7 @@ static int32_t read_word(const uint8_t *buf) // signed int16
     return (int16_t)((int8_t)buf[0]) << 8 | buf[1];
 }
 
-void mpu9250_read(float *gyro, float *acc, float *temp, int16_t *gyro_raw, int16_t *acc_raw) {
+void mpu9250_read(float *gyro, float *acc, float *temp, int16_t *gyro_raw, int16_t *acc_raw, uint8_t *status) {
     static const float gyro_res[] = { DEG2RAD(1 / 131.f),
                                       DEG2RAD(1 / 65.5f),
                                       DEG2RAD(1 / 32.8f),
@@ -87,6 +89,9 @@ void mpu9250_read(float *gyro, float *acc, float *temp, int16_t *gyro_raw, int16
                                      STANDARD_GRAVITY / 2048.f }; // m/s^2 / LSB
     uint8_t buf[1 + 6 + 2 + 6]; // interrupt status, accel, temp, gyro
     read_reg_multi(MPU9250_ADDRESS, INT_STATUS, buf, sizeof(buf));
+    if(status) {
+    	*status = buf[0];
+    }
     if (acc) {
     	acc_raw[0] = read_word(&buf[1]);
     	acc_raw[1] = read_word(&buf[3]);

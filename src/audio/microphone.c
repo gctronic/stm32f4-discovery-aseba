@@ -4,49 +4,83 @@
 #include "microphone.h"
 #include "mp45dt02_processing.h"
 
-static void handlePCMdata(float *data, uint16_t samples) {
+/**
+ * Microphones position:
+ *
+ *      FRONT
+ *       ###
+ *    #   2   #
+ *  #           #
+ * # 1         0 #
+ * #             #
+ *  #           #
+ *    #   3   #
+ *       ###
+ *
+ */
+int32_t mic_volume[4];
+int16_t mic_last[4];
+
+int16_t mic_get_last(uint8_t mic) {
+	if(mic < 4) {
+		return mic_last[mic];
+	} else {
+		return 0;
+	}
+}
+
+int32_t mic_get_volume(uint8_t mic) {
+	if(mic < 4) {
+		return mic_volume[mic];
+	} else {
+		return 0;
+	}
+}
+
+static void handlePCMdata(int16_t *data, uint16_t samples, uint8_t peripheral) {
 	(void)data;
 	(void)samples;
+	int16_t max_value[2]={INT16_MIN}, min_value[2]={INT16_MAX};
+
+	for(uint16_t i=0; i<MIC_BUFFER_LEN; i+=2) {
+		if(data[i] > max_value[0]) {
+			max_value[0] = data[i];
+		}
+		if(data[i] < min_value[0]) {
+			min_value[0] = data[i];
+		}
+		if(data[i+1] > max_value[1]) {
+			max_value[1] = data[i+1];
+		}
+		if(data[i+1] < min_value[1]) {
+			min_value[1] = data[i+1];
+		}
+	}
+
+	if(peripheral == I2S_PERIPHERAL) {
+		mic_volume[0] = max_value[0] - min_value[0];
+		mic_volume[1] = max_value[1] - min_value[1];
+		mic_last[0] = data[MIC_BUFFER_LEN-2];
+		mic_last[1] = data[MIC_BUFFER_LEN-1];
+	} else if(peripheral == SPI_PERIPHERAL) {
+		mic_volume[2] = max_value[0] - min_value[0];
+		mic_volume[3] = max_value[1] - min_value[1];
+		mic_last[2] = data[MIC_BUFFER_LEN-2];
+		mic_last[3] = data[MIC_BUFFER_LEN-1];
+	}
 	return;
 }
 
 void mic_start(void) {
-	// Vedi:
-	// * ChibiOS\os\hal\ports\STM32\LLD\TIMv1\icu_lld.c
-	//   - timer input channel example
-	//
-	// * https://github.com/alanbarr/STM32F4_Streaming_Mic
-	//   - S:\_projects\STM32F4_Streaming_Mic-master
-	//   - esempio ChibiOS per microfono singolo => esempio di configurazione I2S (file stm32_streaming\audio\mp45dt02_processing.c)
-	//   - utile per conversione PDM => PCM e per trasferimento al PC (lwip)
-	//
-	// * ChibiOS\testhal\STM32\STM32F4xx\I2S
-	//   - esempio di configurazione dell'I2S
-	//
-	// * K:\stm32F4\dev\STM32CubeExpansion_MEMSMIC1_V1.3.1\Projects\Multi\Applications\Microphones_Streaming
-	//   - esempio con librerie STM che gestisce fino a 4 microfoni
-	//
-	// * K:\stm32F4\dev\STM32Cube_FW_F4_V1.14.0\Projects\STM32F4-Discovery\Examples\AUDIO:
-	// * K:\AUDIO_4mic_ok
-	// * K:\AUDIO_2mic_ok
-	// * K:\AUDIO_no_timer
-	// * K:\AUDIO-discovery
-	//   - esempio con librerie STM che sono riuscito a fare andare con i 4 microfoni e vedere i dati tramite external debugger
-	//
-	// * K:\stm32F4\dev\STM32Cube_FW_F4_V1.14.0\Projects\STM32F4-Discovery\Applications\Audio\Audio_playback_and_record:
-	// * K:\Audio_playback_and_record
-	//   - esempio con librerie STM che campiona 2 microfoni e salva su penna USB
-
 
 	// *******************
 	// TIMER CONFIGURATION
 	// *******************
-	// TIM9CH1 => input (spi clock) ==> da configurare manualmente (tramite registri)
-	// TIM9CH2	=> output (clock for microphones, 1/2 of input clock) ==> usare PWM driver
+	// TIM9CH1 => input, the source is the I2S2 clock.
+	// TIM9CH2 => output, this is the clock for microphones, 1/2 of input clock.
 
     rccEnableTIM9(FALSE);
     rccResetTIM9();
-    //nvicEnableVector(STM32_TIM9_NUMBER, STM32_ICU_TIM9_IRQ_PRIORITY);
 
     STM32_TIM9->SR   = 0; // Clear eventual pending IRQs.
     STM32_TIM9->DIER = 0; // DMA-related DIER settings => DMA disabled.
@@ -65,7 +99,7 @@ void mic_start(void) {
     STM32_TIM9->SMCR &= ~STM32_TIM_SMCR_SMS_MASK; // Reset the slave mode bits.
     STM32_TIM9->SMCR |= STM32_TIM_SMCR_SMS(7); // External clock mode 1 => clock is TI1FP1.
 
-    // Output channel configuration.
+    // Output channel configuration (pwm mode).
     STM32_TIM9->CR1 &= ~STM32_TIM_CR1_CKD_MASK; // No clock division.
     STM32_TIM9->ARR = 1; // Output clock halved.
     STM32_TIM9->PSC = 0; // No prescaler, counter clock frequency = fCK_PSC / (PSC[15:0] + 1).
@@ -82,23 +116,14 @@ void mic_start(void) {
     // Enable channels.
     STM32_TIM9->CCER |= STM32_TIM_CCER_CC1E | STM32_TIM_CCER_CC2E;
     STM32_TIM9->CR1 |= STM32_TIM_CR1_CEN;
-    //STM32_TIM9->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_URS | STM32_TIM_CR1_CEN;
 
-    // ******************
-	// I2S2 CONFIGURATION
-    // ******************
+    // ***************************
+	// I2S2 AND I2S3 CONFIGURATION
+    // ***************************
     mp45dt02Config micConfig;
     memset(&micConfig, 0, sizeof(micConfig));
-    micConfig.fullbufferCb = handlePCMdata; // Callback chiamata quando buffer riempito con PCM data (1 ms of data).
+    micConfig.fullbufferCb = handlePCMdata; // Callback called when the buffer is filled with 1 ms of PCM data.
     mp45dt02Init(&micConfig);
-
-
-    // ******************
-	// SPI3 CONFIGURATION
-    // ******************
-	// SPI3
-
-
 
 }
 

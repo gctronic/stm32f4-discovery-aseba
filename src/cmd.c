@@ -10,15 +10,28 @@
 #include "chtm.h"
 #include "common/types.h"
 #include "vm/natives.h"
-#include "main.h"
-#include "config_flash_storage.h"
+#include "audio/audio_thread.h"
+#include "audio/microphone.h"
 #include "camera/po8030.h"
 #include "camera/dcmi_camera.h"
+#include "sensors/battery_level.h"
+#include "config_flash_storage.h"
 #include "leds.h"
-#include "motor.h"
+#include "main.h"
+#include "motors.h"
 
 #define TEST_WA_SIZE        THD_WORKING_AREA_SIZE(256)
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
+
+/*
+ * SDC related variables and definitions.
+ */
+#define SDC_BURST_SIZE      16
+/* Buffer for block read/write operations, note that extra bytes are
+   allocated in order to support unaligned operations.*/
+static uint8_t buf[MMCSD_BLOCK_SIZE * SDC_BURST_SIZE + 4];
+/* Additional buffer for sdcErase() test */
+static uint8_t buf2[MMCSD_BLOCK_SIZE * SDC_BURST_SIZE ];
 
 static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[])
 {
@@ -657,17 +670,26 @@ static void cmd_cam_send(BaseSequentialStream *chp, int argc, char **argv)
     (void) argv;
 
 	if(capture_mode == CAPTURE_ONE_SHOT) {
-		txComplete = 1;
 		chprintf(chp, "The image will be sent within 5 seconds\r\n");
+		chThdSleepMilliseconds(5000);
+		chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
 	} else {
 		if(dcmi_stop_stream(&DCMID) == MSG_OK) {
-			txComplete = 1;
-			chprintf(chp, "The image will be sent within 5 seconds\r\n");
+			if(double_buffering == 1) { // Send both images.
+				chprintf(chp, "The 2 images will be sent within 5 seconds\r\n");
+				chThdSleepMilliseconds(5000);
+				chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
+				chThdSleepMilliseconds(3000);
+				chnWrite((BaseSequentialStream *)&SDU1, sample_buffer2, po8030_get_image_size());
+			} else {
+				chprintf(chp, "The image will be sent within 5 seconds\r\n");
+				chThdSleepMilliseconds(5000);
+				chnWrite((BaseSequentialStream *)&SDU1, sample_buffer, po8030_get_image_size());
+			}
 		} else {
 			chprintf(chp, "DCMI stop stream error\r\n");
 		}
 	}
-
 }
 
 static void cmd_set_led(BaseSequentialStream *chp, int argc, char **argv)
@@ -697,7 +719,7 @@ static void cmd_set_speed(BaseSequentialStream *chp, int argc, char **argv)
 	int16_t speed_right = 0;
 
     if (argc != 2) {
-        chprintf(chp, "Usage: set_speed left right\r\nspeed: -1200..1200\r\n");
+        chprintf(chp, "Usage: set_speed left right\r\nspeed: %d..%d\r\n", -MOTOR_SPEED_LIMIT, MOTOR_SPEED_LIMIT);
     } else {
         speed_left = (int16_t) atoi(argv[0]);
         speed_right = (int16_t) atoi(argv[1]);
@@ -705,6 +727,257 @@ static void cmd_set_speed(BaseSequentialStream *chp, int argc, char **argv)
 		right_motor_set_speed(speed_right);
 		left_motor_set_speed(speed_left);
     }
+}
+
+static void cmd_get_battery(BaseSequentialStream *chp, int argc, char **argv)
+{
+	(void) chp;
+    (void) argc;
+    (void) argv;
+    chprintf(chp, "Battery raw value = %d\r\n", get_battery_raw());
+}
+
+static void cmd_audio_play(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint16_t freq;
+    if (argc != 1) {
+        chprintf(chp,
+                 "Usage: audio_play freq\r\nfreq=100..20000 Hz\r\n");
+    } else {
+    	freq = (uint16_t) atoi(argv[0]);
+        dac_play(freq);
+    }
+}
+
+static void cmd_audio_stop(BaseSequentialStream *chp, int argc, char **argv)
+{
+	(void) chp;
+    (void) argc;
+    (void) argv;
+    dac_stop();
+}
+
+static void cmd_volume(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    uint8_t mic;
+    if (argc != 1) {
+        chprintf(chp, "Usage: volume mic_num.\r\nmic_num=0..3\r\n");
+    } else {
+        mic = (uint8_t) atoi(argv[0]);
+        chprintf(chp, "%d\r\n", mic_get_volume(mic));
+    }
+}
+
+void cmd_sdc(BaseSequentialStream *chp, int argc, char *argv[]) {
+  static const char *mode[] = {"SDV11", "SDV20", "MMC", NULL};
+  systime_t start, end;
+  uint32_t n, startblk;
+
+  if (argc != 1) {
+    chprintf(chp, "Usage: sdc read|write|erase|all\r\n");
+    return;
+  }
+
+  /* Card presence check.*/
+  if (!blkIsInserted(&SDCD1)) {
+    chprintf(chp, "Card not inserted, aborting.\r\n");
+    return;
+  }
+
+  /* Connection to the card.*/
+  chprintf(chp, "Connecting... ");
+  if (sdcConnect(&SDCD1)) {
+    chprintf(chp, "failed\r\n");
+    return;
+  }
+
+  chprintf(chp, "OK\r\n\r\nCard Info\r\n");
+  chprintf(chp, "CSD      : %08X %8X %08X %08X \r\n",
+           SDCD1.csd[3], SDCD1.csd[2], SDCD1.csd[1], SDCD1.csd[0]);
+  chprintf(chp, "CID      : %08X %8X %08X %08X \r\n",
+           SDCD1.cid[3], SDCD1.cid[2], SDCD1.cid[1], SDCD1.cid[0]);
+  chprintf(chp, "Mode     : %s\r\n", mode[SDCD1.cardmode & 3U]);
+  chprintf(chp, "Capacity : %DMB\r\n", SDCD1.capacity / 2048);
+
+  /* The test is performed in the middle of the flash area.*/
+  startblk = (SDCD1.capacity / MMCSD_BLOCK_SIZE) / 2;
+
+  if ((strcmp(argv[0], "read") == 0) ||
+      (strcmp(argv[0], "all") == 0)) {
+
+    /* Single block read performance, aligned.*/
+    chprintf(chp, "Single block aligned read performance:           ");
+    start = chVTGetSystemTime();
+    end = start + MS2ST(1000);
+    n = 0;
+    do {
+      if (blkRead(&SDCD1, startblk, buf, 1)) {
+        chprintf(chp, "failed\r\n");
+        goto exittest;
+      }
+      n++;
+    } while (chVTIsSystemTimeWithin(start, end));
+    chprintf(chp, "%D blocks/S, %D bytes/S\r\n", n, n * MMCSD_BLOCK_SIZE);
+
+    /* Multiple sequential blocks read performance, aligned.*/
+    chprintf(chp, "16 sequential blocks aligned read performance:   ");
+    start = chVTGetSystemTime();
+    end = start + MS2ST(1000);
+    n = 0;
+    do {
+      if (blkRead(&SDCD1, startblk, buf, SDC_BURST_SIZE)) {
+        chprintf(chp, "failed\r\n");
+        goto exittest;
+      }
+      n += SDC_BURST_SIZE;
+    } while (chVTIsSystemTimeWithin(start, end));
+    chprintf(chp, "%D blocks/S, %D bytes/S\r\n", n, n * MMCSD_BLOCK_SIZE);
+
+#if STM32_SDC_SDIO_UNALIGNED_SUPPORT
+    /* Single block read performance, unaligned.*/
+    chprintf(chp, "Single block unaligned read performance:         ");
+    start = chVTGetSystemTime();
+    end = start + MS2ST(1000);
+    n = 0;
+    do {
+      if (blkRead(&SDCD1, startblk, buf + 1, 1)) {
+        chprintf(chp, "failed\r\n");
+        goto exittest;
+      }
+      n++;
+    } while (chVTIsSystemTimeWithin(start, end));
+    chprintf(chp, "%D blocks/S, %D bytes/S\r\n", n, n * MMCSD_BLOCK_SIZE);
+
+    /* Multiple sequential blocks read performance, unaligned.*/
+    chprintf(chp, "16 sequential blocks unaligned read performance: ");
+    start = chVTGetSystemTime();
+    end = start + MS2ST(1000);
+    n = 0;
+    do {
+      if (blkRead(&SDCD1, startblk, buf + 1, SDC_BURST_SIZE)) {
+        chprintf(chp, "failed\r\n");
+        goto exittest;
+      }
+      n += SDC_BURST_SIZE;
+    } while (chVTIsSystemTimeWithin(start, end));
+    chprintf(chp, "%D blocks/S, %D bytes/S\r\n", n, n * MMCSD_BLOCK_SIZE);
+#endif /* STM32_SDC_SDIO_UNALIGNED_SUPPORT */
+  }
+
+  if ((strcmp(argv[0], "write") == 0) ||
+      (strcmp(argv[0], "all") == 0)) {
+    unsigned i;
+
+    memset(buf, 0xAA, MMCSD_BLOCK_SIZE * 2);
+    chprintf(chp, "Writing...");
+    if(sdcWrite(&SDCD1, startblk, buf, 2)) {
+      chprintf(chp, "failed\r\n");
+      goto exittest;
+    }
+    chprintf(chp, "OK\r\n");
+
+    memset(buf, 0x55, MMCSD_BLOCK_SIZE * 2);
+    chprintf(chp, "Reading...");
+    if (blkRead(&SDCD1, startblk, buf, 1)) {
+      chprintf(chp, "failed\r\n");
+      goto exittest;
+    }
+    chprintf(chp, "OK\r\n");
+
+    for (i = 0; i < MMCSD_BLOCK_SIZE; i++)
+      buf[i] = i + 8;
+    chprintf(chp, "Writing...");
+    if(sdcWrite(&SDCD1, startblk, buf, 2)) {
+      chprintf(chp, "failed\r\n");
+      goto exittest;
+    }
+    chprintf(chp, "OK\r\n");
+
+    memset(buf, 0, MMCSD_BLOCK_SIZE * 2);
+    chprintf(chp, "Reading...");
+    if (blkRead(&SDCD1, startblk, buf, 1)) {
+      chprintf(chp, "failed\r\n");
+      goto exittest;
+    }
+    chprintf(chp, "OK\r\n");
+  }
+
+  if ((strcmp(argv[0], "erase") == 0) ||
+      (strcmp(argv[0], "all") == 0)) {
+    /**
+     * Test sdcErase()
+     * Strategy:
+     *   1. Fill two blocks with non-constant data
+     *   2. Write two blocks starting at startblk
+     *   3. Erase the second of the two blocks
+     *      3.1. First block should be equal to the data written
+     *      3.2. Second block should NOT be equal too the data written (i.e. erased).
+     *   4. Erase both first and second block
+     *      4.1 Both blocks should not be equal to the data initially written
+     * Precondition: SDC_BURST_SIZE >= 2
+     */
+    memset(buf, 0, MMCSD_BLOCK_SIZE * 2);
+    memset(buf2, 0, MMCSD_BLOCK_SIZE * 2);
+    /* 1. */
+    unsigned int i = 0;
+    for (; i < MMCSD_BLOCK_SIZE * 2; ++i) {
+      buf[i] = (i + 7) % 'T'; //Ensure block 1/2 are not equal
+    }
+    /* 2. */
+    if(sdcWrite(&SDCD1, startblk, buf, 2)) {
+      chprintf(chp, "sdcErase() test write failed\r\n");
+      goto exittest;
+    }
+    /* 3. (erase) */
+    if(sdcErase(&SDCD1, startblk + 1, startblk + 2)) {
+      chprintf(chp, "sdcErase() failed\r\n");
+      goto exittest;
+    }
+    sdcflags_t errflags = sdcGetAndClearErrors(&SDCD1);
+    if(errflags) {
+      chprintf(chp, "sdcErase() yielded error flags: %d\r\n", errflags);
+      goto exittest;
+    }
+    if(sdcRead(&SDCD1, startblk, buf2, 2)) {
+      chprintf(chp, "single-block sdcErase() failed\r\n");
+      goto exittest;
+    }
+    /* 3.1. */
+    if(memcmp(buf, buf2, MMCSD_BLOCK_SIZE) != 0) {
+      chprintf(chp, "sdcErase() non-erased block compare failed\r\n");
+      goto exittest;
+    }
+    /* 3.2. */
+    if(memcmp(buf + MMCSD_BLOCK_SIZE,
+              buf2 + MMCSD_BLOCK_SIZE, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf(chp, "sdcErase() erased block compare failed\r\n");
+      goto exittest;
+    }
+    /* 4. */
+    if(sdcErase(&SDCD1, startblk, startblk + 2)) {
+      chprintf(chp, "multi-block sdcErase() failed\r\n");
+      goto exittest;
+    }
+    if(sdcRead(&SDCD1, startblk, buf2, 2)) {
+      chprintf(chp, "single-block sdcErase() failed\r\n");
+      goto exittest;
+    }
+    /* 4.1 */
+    if(memcmp(buf, buf2, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf(chp, "multi-block sdcErase() erased block compare failed\r\n");
+      goto exittest;
+    }
+    if(memcmp(buf + MMCSD_BLOCK_SIZE,
+              buf2 + MMCSD_BLOCK_SIZE, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf(chp, "multi-block sdcErase() erased block compare failed\r\n");
+      goto exittest;
+    }
+    /* END of sdcErase() test */
+  }
+
+  /* Card disconnect and command end.*/
+exittest:
+  sdcDisconnect(&SDCD1);
 }
 
 const ShellCommand shell_commands[] = {
@@ -735,6 +1008,11 @@ const ShellCommand shell_commands[] = {
 	{"cam_send", cmd_cam_send},
 	{"set_led", cmd_set_led},
 	{"set_speed", cmd_set_speed},
+	{"batt", cmd_get_battery},
+	{"audio_play", cmd_audio_play},
+	{"audio_stop", cmd_audio_stop},
+	{"volume", cmd_volume},
+	{"sdc", cmd_sdc},
     {NULL, NULL}
 };
 

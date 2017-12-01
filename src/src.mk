@@ -8,8 +8,10 @@ INCDIR += ./fatfs/src/
 INCDIR += src/
 
 
+CSRC += ./ChibiOS_ext/os/hal/ports/STM32/LLD/SPIv1/spi3_slave_lld.c
 CSRC += ./ChibiOS_ext/os/hal/ports/STM32/STM32F4xx/dcmi_lld.c
 CSRC += ./ChibiOS_ext/os/hal/src/dcmi.c
+CSRC += ./ChibiOS_ext/os/hal/src/spi3_slave.c
 CSRC += ./fatfs/src/ff.c
 CSRC += ./src/audio/audio_thread.c
 CSRC += ./src/audio/microphone.c
@@ -24,12 +26,14 @@ CSRC += ./src/fatfs_diskio.c
 CSRC += ./src/fatfs_syscall.c
 CSRC += ./src/flash/flash.c
 CSRC += ./src/i2c_bus.c
+CSRC += ./src/ir_remote.c
 CSRC += ./src/leds.c
 CSRC += ./src/main.c
 CSRC += ./src/memory_protection.c
-CSRC += ./src/motor.c
+CSRC += ./src/motors.c
 CSRC += ./src/panic.c
 CSRC += ./src/sdcard.c
+CSRC += ./src/sensors/battery_level.c
 CSRC += ./src/sensors/imu.c
 CSRC += ./src/sensors/mpu9250.c
 CSRC += ./src/sensors/proximity.c

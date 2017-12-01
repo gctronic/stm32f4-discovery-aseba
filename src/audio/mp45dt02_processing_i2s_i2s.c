@@ -27,10 +27,10 @@
 #include <string.h>
 #include "ch.h"
 #include "hal.h"
-#include "spi3_slave.h"
 //#include "autogen_fir_coeffs.h"
 //#include "debug.h"
 #include "mp45dt02_processing.h"
+#include "..\leds.h"
 #include "pdm_filter.h"
 
 /******************************************************************************/
@@ -38,7 +38,8 @@
 /******************************************************************************/
 
 /* ChibiOS I2S driver in use */
-#define MP45DT02_I2S_DRIVER                 I2SD2
+#define MP45DT02_I2S2_DRIVER                 I2SD2
+#define MP45DT02_I2S3_DRIVER                 I2SD3
 
 /* STM32F4 configuration for the I2S configuration register */
 #define I2SCFG_MODE_MASTER_RECEIVE          (SPI_I2SCFGR_I2SCFG_0 | SPI_I2SCFGR_I2SCFG_1)
@@ -106,15 +107,7 @@ static struct {
     uint32_t number;
     uint16_t buffer[MP45DT02_BUFFER_SIZE_2B];
     uint32_t guard;
-} mp45dt02I2sData;
-
-static struct {
-    uint32_t offset;
-    uint32_t number;
-    uint16_t tx_buffer[MP45DT02_BUFFER_SIZE_2B];
-    uint16_t rx_buffer[MP45DT02_BUFFER_SIZE_2B];
-    uint32_t guard;
-} mp45dt02SPIData;
+} mp45dt02I2s2Data, mp45dt02I2s3Data;
 
 //static struct {
 //    arm_fir_decimate_instance_f32 decimateInstance;
@@ -122,34 +115,34 @@ static struct {
 //    uint32_t guard;
 //} cmsisDsp;
 
-uint16_t PDM_buffer_I2S[MP45DT02_BUFFER_SIZE_2B/2] = {0};
-uint16_t PCM_buffer_I2S[MP45DT02_DECIMATED_BUFFER_SIZE] = {0};
-uint16_t PCM_buffer_long_I2S[MIC_BUFFER_LEN] = {0};
-uint8_t pcm_index_I2S = 0;
+uint16_t PDM_buffer_I2S2[MP45DT02_BUFFER_SIZE_2B/2] = {0};
+uint16_t PCM_buffer_I2S2[MP45DT02_DECIMATED_BUFFER_SIZE] = {0};
+uint16_t PCM_buffer_long_I2S2[MP45DT02_DECIMATED_BUFFER_SIZE*10] = {0};
+uint8_t pcm_index_I2S2 = 0;
 
-uint16_t PDM_buffer_SPI[MP45DT02_BUFFER_SIZE_2B/2] = {0};
-uint16_t PCM_buffer_SPI[MP45DT02_DECIMATED_BUFFER_SIZE] = {0};
-uint16_t PCM_buffer_long_SPI[MIC_BUFFER_LEN] = {0};
-uint8_t pcm_index_SPI = 0;
+uint16_t PDM_buffer_I2S3[MP45DT02_BUFFER_SIZE_2B/2] = {0};
+uint16_t PCM_buffer_I2S3[MP45DT02_DECIMATED_BUFFER_SIZE] = {0};
+uint16_t PCM_buffer_long_I2S3[MP45DT02_DECIMATED_BUFFER_SIZE*10] = {0};
+uint8_t pcm_index_I2S3 = 0;
 
-static thread_t *I2SProcessingThd;
-static THD_WORKING_AREA(I2SProcessingThdWA, 1024);
-static semaphore_t I2SProcessingSem;
+static thread_t *I2S2ProcessingThd;
+static THD_WORKING_AREA(I2S2ProcessingThdWA, 1024);
+static semaphore_t I2S2ProcessingSem;
 
-static thread_t *SPIProcessingThd;
-static THD_WORKING_AREA(SPIProcessingThdWA, 1024);
-static semaphore_t SPIProcessingSem;
+static thread_t *I2S3ProcessingThd;
+static THD_WORKING_AREA(I2S3ProcessingThdWA, 1024);
+static semaphore_t I2S3ProcessingSem;
 
-static I2SConfig mp45dt02I2SConfig;
-static SPISlaveConfig mp45dt02SPIConfig;
+static I2SConfig mp45dt02I2S2Config;
+static I2SConfig mp45dt02I2S3Config;
 
 //static float32_t mp45dt02ExpandedBuffer[MP45DT02_EXPANDED_BUFFER_SIZE];
 //static float32_t mp45dt02DecimatedBuffer[MP45DT02_DECIMATED_BUFFER_SIZE];
 
 static mp45dt02Config initConfig;
 
-PDMFilter_InitStruct PDM_filter_I2S[MP45DT02_NUM_CHANNELS];
-PDMFilter_InitStruct PDM_filter_SPI[MP45DT02_NUM_CHANNELS];
+PDMFilter_InitStruct PDM_filter_I2S2[MP45DT02_NUM_CHANNELS];
+PDMFilter_InitStruct PDM_filter_I2S3[MP45DT02_NUM_CHANNELS];
 
 static void PDMDecoder_Init(void) {
 	uint8_t i = 0;
@@ -159,19 +152,19 @@ static void PDMDecoder_Init(void) {
 
 	for(i=0; i<MP45DT02_NUM_CHANNELS; i++) {
 		// Filter LP and HP Init.
-		PDM_filter_I2S[i].LP_HZ = I2S_AUDIOFREQ_16K/2;
-		PDM_filter_I2S[i].HP_HZ = 10;
-		PDM_filter_I2S[i].Fs = I2S_AUDIOFREQ_16K;
-		PDM_filter_I2S[i].Out_MicChannels = 2;
-		PDM_filter_I2S[i].In_MicChannels = 2;
-		PDM_Filter_Init((PDMFilter_InitStruct *)&PDM_filter_I2S[i]);
+		PDM_filter_I2S2[i].LP_HZ = I2S_AUDIOFREQ_16K/2;
+		PDM_filter_I2S2[i].HP_HZ = 10;
+		PDM_filter_I2S2[i].Fs = I2S_AUDIOFREQ_16K;
+		PDM_filter_I2S2[i].Out_MicChannels = 2;
+		PDM_filter_I2S2[i].In_MicChannels = 2;
+		PDM_Filter_Init((PDMFilter_InitStruct *)&PDM_filter_I2S2[i]);
 
-		PDM_filter_SPI[i].LP_HZ = I2S_AUDIOFREQ_16K/2;
-		PDM_filter_SPI[i].HP_HZ = 10;
-		PDM_filter_SPI[i].Fs = I2S_AUDIOFREQ_16K;
-		PDM_filter_SPI[i].Out_MicChannels = 2;
-		PDM_filter_SPI[i].In_MicChannels = 2;
-		PDM_Filter_Init((PDMFilter_InitStruct *)&PDM_filter_SPI[i]);
+		PDM_filter_I2S3[i].LP_HZ = I2S_AUDIOFREQ_16K/2;
+		PDM_filter_I2S3[i].HP_HZ = 10;
+		PDM_filter_I2S3[i].Fs = I2S_AUDIOFREQ_16K;
+		PDM_filter_I2S3[i].Out_MicChannels = 2;
+		PDM_filter_I2S3[i].In_MicChannels = 2;
+		PDM_Filter_Init((PDMFilter_InitStruct *)&PDM_filter_I2S3[i]);
 	}
 
 }
@@ -215,55 +208,59 @@ static void PDMDecoder_Init(void) {
 //    }
 //}
 
-static THD_FUNCTION(I2SProcessing, arg)
+static THD_FUNCTION(I2S2Processing, arg)
 {
     (void)arg;
 
     chRegSetThreadName(__FUNCTION__);
 
 	uint32_t index = 0;
-	uint16_t * DataTempI2S = &mp45dt02I2sData.buffer[mp45dt02I2sData.offset]; // Point to the last filled data, the other half of the buffer is being filled by DMA.
+	uint16_t * DataTempI2S = &mp45dt02I2s2Data.buffer[mp45dt02I2s2Data.offset]; // Point to the last filled data, the other half of the buffer is being filled by DMA.
 	uint8_t a,b=0;
 
     while (chThdShouldTerminateX() == false)
     {
-        chSemWait(&I2SProcessingSem);
+        chSemWait(&I2S2ProcessingSem);
+        
+        //set_led(1, 2);
 
         if (chThdShouldTerminateX() == true)
         {
             break;
         }
 
+        set_led(2, 1);
         // We have MP45DT02_SAMPLE_SIZE_4B = 64 samples of 32 bits each (=> mp45dt02I2sData.number = 64).
         // Each sample is 32 bits, thus  64 * 32 bits = 2048 PDM samples.
         // The samples are interleaved left and right, this means that the first bit is left, the second is right, ...
         // Extract the bits sequence and transform it in order to have 1 byte left, 1 byte right, ...
         // This is needed by the library functions that convert PDM in PCM samples.
-        for(index=0; index < mp45dt02I2sData.number*2; index++) { // We take in consideration 16 bits at a time, thus we loop twice as the number of samples.
+        for(index=0; index < mp45dt02I2s2Data.number*2; index++) { // We take in consideration 16 bits at a time, thus we loop twice as the number of samples.
 			a = ((uint8_t *)(DataTempI2S))[(index*2)]; // MSByte.
 			b = ((uint8_t *)(DataTempI2S))[(index*2)+1]; // LSByte.
-			((uint8_t *)PDM_buffer_I2S)[(index*2)] = Channel_Demux[a & CHANNEL_DEMUX_MASK] | Channel_Demux[b & CHANNEL_DEMUX_MASK] << 4; // Extract left and swap bytes.
-			((uint8_t *)PDM_buffer_I2S)[(index*2)+1] = Channel_Demux[(a>>1) & CHANNEL_DEMUX_MASK] |Channel_Demux[(b>>1) & CHANNEL_DEMUX_MASK] << 4; // Extract right and swap bytes.
+			((uint8_t *)PDM_buffer_I2S2)[(index*2)] = Channel_Demux[a & CHANNEL_DEMUX_MASK] | Channel_Demux[b & CHANNEL_DEMUX_MASK] << 4; // Extract left and swap bytes.
+			((uint8_t *)PDM_buffer_I2S2)[(index*2)+1] = Channel_Demux[(a>>1) & CHANNEL_DEMUX_MASK] |Channel_Demux[(b>>1) & CHANNEL_DEMUX_MASK] << 4; // Extract right and swap bytes.
 		}
 
+        set_led(3, 1);
         // Using a decimator factor of 64, we get 2048/64 = 32 PCM samples of 16 bits, 16 PCM for left channel and 16 PCM for right channel.
         for(index = 0; index < MP45DT02_NUM_CHANNELS; index++) {
         	/* PDM to PCM filter */
-        	PDM_Filter_64_LSB(&((uint8_t*)(PDM_buffer_I2S))[index], (uint16_t*)&(PCM_buffer_I2S[index]), AUDIO_IN_VOLUME , (PDMFilter_InitStruct *)&PDM_filter_I2S[index]);
+        	PDM_Filter_64_LSB(&((uint8_t*)(PDM_buffer_I2S2))[index], (uint16_t*)&(PCM_buffer_I2S2[index]), AUDIO_IN_VOLUME , (PDMFilter_InitStruct *)&PDM_filter_I2S2[index]);
         //	a+=(b*index);
         }
+        set_led(3, 0);
 
-        memcpy(&PCM_buffer_long_I2S[pcm_index_I2S*MP45DT02_DECIMATED_BUFFER_SIZE], &PCM_buffer_I2S[0], MP45DT02_DECIMATED_BUFFER_SIZE*2);
-        if(pcm_index_I2S == 9) {
-        	pcm_index_I2S = 0;
-        	initConfig.fullbufferCb((int16_t *)PCM_buffer_long_I2S,
-        							MIC_BUFFER_LEN,
-									I2S_PERIPHERAL);
+        memcpy(&PCM_buffer_long_I2S2[pcm_index_I2S2*MP45DT02_DECIMATED_BUFFER_SIZE], &PCM_buffer_I2S2[0], MP45DT02_DECIMATED_BUFFER_SIZE*2);
+        if(pcm_index_I2S2 == 9) {
+        	pcm_index_I2S2 = 0;
         } else {
-        	pcm_index_I2S++;
+        	pcm_index_I2S2++;
         }
 
-        if (mp45dt02I2sData.number != MP45DT02_SAMPLE_SIZE_4B*2)
+        set_led(2, 0);
+
+        if (mp45dt02I2s2Data.number != MP45DT02_SAMPLE_SIZE_4B*2)
         {
 //            PRINT_CRITICAL("Unexpected number of samples provided. %d not %d.",
 //                           mp45dt02I2sData.number,
@@ -291,10 +288,9 @@ static THD_FUNCTION(I2SProcessing, arg)
         /**********************************************************************/ 
 
 //        initConfig.fullbufferCb(mp45dt02DecimatedBuffer,
-//                                MP45DT02_DECIMATED_BUFFER_SIZE,
-//								I2S_PERIPHERAL);
+//                                MP45DT02_DECIMATED_BUFFER_SIZE);
 
-        if (mp45dt02I2sData.guard != MEMORY_GUARD)
+        if (mp45dt02I2s2Data.guard != MEMORY_GUARD)
         {
 //            PRINT_CRITICAL("Overflow detected.",0);
         }
@@ -305,55 +301,59 @@ static THD_FUNCTION(I2SProcessing, arg)
     }
 }
 
-static THD_FUNCTION(SPIProcessing, arg)
+static THD_FUNCTION(I2S3Processing, arg)
 {
     (void)arg;
 
     chRegSetThreadName(__FUNCTION__);
 
 	uint32_t index = 0;
-	uint16_t * DataTempSPI = &mp45dt02SPIData.rx_buffer[mp45dt02SPIData.offset]; // Point to the last filled data, the other half of the buffer is being filled by DMA.
+	uint16_t * DataTempI2S = &mp45dt02I2s3Data.buffer[mp45dt02I2s3Data.offset]; // Point to the last filled data, the other half of the buffer is being filled by DMA.
 	uint8_t a,b=0;
 
     while (chThdShouldTerminateX() == false)
     {
-        chSemWait(&SPIProcessingSem);
+        chSemWait(&I2S3ProcessingSem);
+
+        //set_led(1, 2);
 
         if (chThdShouldTerminateX() == true)
         {
             break;
         }
 
+        set_led(2, 1);
         // We have MP45DT02_SAMPLE_SIZE_4B = 64 samples of 32 bits each (=> mp45dt02I2sData.number = 64).
         // Each sample is 32 bits, thus  64 * 32 bits = 2048 PDM samples.
         // The samples are interleaved left and right, this means that the first bit is left, the second is right, ...
         // Extract the bits sequence and transform it in order to have 1 byte left, 1 byte right, ...
         // This is needed by the library functions that convert PDM in PCM samples.
-        for(index=0; index < mp45dt02SPIData.number*2; index++) { // We take in consideration 16 bits at a time, thus we loop twice as the number of samples.
-			a = ((uint8_t *)(DataTempSPI))[(index*2)]; // MSByte.
-			b = ((uint8_t *)(DataTempSPI))[(index*2)+1]; // LSByte.
-			((uint8_t *)PDM_buffer_SPI)[(index*2)] = Channel_Demux[a & CHANNEL_DEMUX_MASK] | Channel_Demux[b & CHANNEL_DEMUX_MASK] << 4; // Extract left and swap bytes.
-			((uint8_t *)PDM_buffer_SPI)[(index*2)+1] = Channel_Demux[(a>>1) & CHANNEL_DEMUX_MASK] |Channel_Demux[(b>>1) & CHANNEL_DEMUX_MASK] << 4; // Extract right and swap bytes.
+        for(index=0; index < mp45dt02I2s3Data.number*2; index++) { // We take in consideration 16 bits at a time, thus we loop twice as the number of samples.
+			a = ((uint8_t *)(DataTempI2S))[(index*2)]; // MSByte.
+			b = ((uint8_t *)(DataTempI2S))[(index*2)+1]; // LSByte.
+			((uint8_t *)PDM_buffer_I2S3)[(index*2)] = Channel_Demux[a & CHANNEL_DEMUX_MASK] | Channel_Demux[b & CHANNEL_DEMUX_MASK] << 4; // Extract left and swap bytes.
+			((uint8_t *)PDM_buffer_I2S3)[(index*2)+1] = Channel_Demux[(a>>1) & CHANNEL_DEMUX_MASK] |Channel_Demux[(b>>1) & CHANNEL_DEMUX_MASK] << 4; // Extract right and swap bytes.
 		}
 
+        set_led(3, 1);
         // Using a decimator factor of 64, we get 2048/64 = 32 PCM samples of 16 bits, 16 PCM for left channel and 16 PCM for right channel.
         for(index = 0; index < MP45DT02_NUM_CHANNELS; index++) {
         	/* PDM to PCM filter */
-        	PDM_Filter_64_LSB(&((uint8_t*)(PDM_buffer_SPI))[index], (uint16_t*)&(PCM_buffer_SPI[index]), AUDIO_IN_VOLUME , (PDMFilter_InitStruct *)&PDM_filter_SPI[index]);
+        	PDM_Filter_64_LSB(&((uint8_t*)(PDM_buffer_I2S3))[index], (uint16_t*)&(PCM_buffer_I2S3[index]), AUDIO_IN_VOLUME , (PDMFilter_InitStruct *)&PDM_filter_I2S3[index]);
         //	a+=(b*index);
         }
+        set_led(3, 0);
 
-        memcpy(&PCM_buffer_long_SPI[pcm_index_SPI*MP45DT02_DECIMATED_BUFFER_SIZE], &PCM_buffer_SPI[0], MP45DT02_DECIMATED_BUFFER_SIZE*2);
-        if(pcm_index_SPI == 9) {
-        	pcm_index_SPI = 0;
-        	initConfig.fullbufferCb((int16_t *)PCM_buffer_long_SPI,
-        							MIC_BUFFER_LEN,
-									SPI_PERIPHERAL);
+        memcpy(&PCM_buffer_long_I2S3[pcm_index_I2S3*MP45DT02_DECIMATED_BUFFER_SIZE], &PCM_buffer_I2S3[0], MP45DT02_DECIMATED_BUFFER_SIZE*2);
+        if(pcm_index_I2S3 == 9) {
+        	pcm_index_I2S3 = 0;
         } else {
-        	pcm_index_SPI++;
+        	pcm_index_I2S3++;
         }
 
-        if (mp45dt02SPIData.number != MP45DT02_SAMPLE_SIZE_4B*2)
+        set_led(2, 0);
+
+        if (mp45dt02I2s3Data.number != MP45DT02_SAMPLE_SIZE_4B*2)
         {
 //            PRINT_CRITICAL("Unexpected number of samples provided. %d not %d.",
 //                           mp45dt02I2sData.number,
@@ -381,10 +381,9 @@ static THD_FUNCTION(SPIProcessing, arg)
         /**********************************************************************/
 
 //        initConfig.fullbufferCb(mp45dt02DecimatedBuffer,
-//                                MP45DT02_DECIMATED_BUFFER_SIZE,
-//								SPI_PERIPHERAL);
+//                                MP45DT02_DECIMATED_BUFFER_SIZE);
 
-        if (mp45dt02SPIData.guard != MEMORY_GUARD)
+        if (mp45dt02I2s3Data.guard != MEMORY_GUARD)
         {
 //            PRINT_CRITICAL("Overflow detected.",0);
         }
@@ -396,24 +395,26 @@ static THD_FUNCTION(SPIProcessing, arg)
 }
 
 /* (*i2scallback_t) */
-static void mp45dt02I2SCb(I2SDriver *i2sp, size_t offset, size_t number)
+static void mp45dt02I2S2Cb(I2SDriver *i2sp, size_t offset, size_t number)
 {
     (void)i2sp;
+    set_led(0, 2);
     chSysLockFromISR();
-    mp45dt02I2sData.offset = offset;
-    mp45dt02I2sData.number = number;
-    chSemSignalI(&I2SProcessingSem);
+    mp45dt02I2s2Data.offset = offset;
+    mp45dt02I2s2Data.number = number;
+    chSemSignalI(&I2S2ProcessingSem);
     chSysUnlockFromISR();
 }
 
-void mp45dt02SPICb(SPISlaveDriver *spip, size_t offset, size_t number) {
-
-  (void)spip;
-  chSysLockFromISR();
-  mp45dt02SPIData.offset = offset;
-  mp45dt02SPIData.number = number;
-  chSemSignalI(&SPIProcessingSem);
-  chSysUnlockFromISR();
+static void mp45dt02I2S3Cb(I2SDriver *i2sp, size_t offset, size_t number)
+{
+    (void)i2sp;
+    set_led(1, 2);
+    chSysLockFromISR();
+    mp45dt02I2s3Data.offset = offset;
+    mp45dt02I2s3Data.number = number;
+    chSemSignalI(&I2S3ProcessingSem);
+    chSysUnlockFromISR();
 }
 
 static void dspInit(void)
@@ -440,82 +441,88 @@ void mp45dt02Init(mp45dt02Config *config)
 
     initConfig = *config;
 
-    chSemObjectInit(&I2SProcessingSem, 0);
+    chSemObjectInit(&I2S2ProcessingSem, 0);
 
-    I2SProcessingThd = chThdCreateStatic(I2SProcessingThdWA,
-    									sizeof(I2SProcessingThdWA),
+    I2S2ProcessingThd = chThdCreateStatic(I2S2ProcessingThdWA,
+    									sizeof(I2S2ProcessingThdWA),
+										NORMALPRIO+2,
+										I2S2Processing, NULL);
+
+    chSemObjectInit(&I2S3ProcessingSem, 0);
+
+    I2S3ProcessingThd = chThdCreateStatic(I2S3ProcessingThdWA,
+    									sizeof(I2S3ProcessingThdWA),
 										NORMALPRIO+1,
-										I2SProcessing, NULL);
-
-    chSemObjectInit(&SPIProcessingSem, 0);
-
-    SPIProcessingThd = chThdCreateStatic(SPIProcessingThdWA,
-    									sizeof(SPIProcessingThdWA),
-										NORMALPRIO+1,
-										SPIProcessing, NULL);
+										I2S3Processing, NULL);
 
     dspInit();
 
     PDMDecoder_Init();
 
     //*******************
-    // SPI3 configuration
-    //*******************
-    memset(&mp45dt02SPIData, 0, sizeof(mp45dt02SPIData));
-    mp45dt02SPIData.guard = MEMORY_GUARD;
-
-    memset(&mp45dt02SPIConfig, 0, sizeof(mp45dt02SPIConfig));
-    mp45dt02SPIConfig.end_cb = mp45dt02SPICb; // Callback function called at half-fill (1 ms of data) and full-fill (1 ms of data).
-    mp45dt02SPIConfig.ssport = 0;
-    mp45dt02SPIConfig.sspad = 0;
-    mp45dt02SPIConfig.size = MP45DT02_SAMPLE_SIZE_4B*2; // 2 ms of data
-    mp45dt02SPIConfig.cr1 = SPI_CR1_DFF; // 16-bit frame format.
-
-    spi3SlaveInit();
-    spi3SlaveStart(&SPISLAVED3, &mp45dt02SPIConfig);
-    spi3SlaveStartExchange(&SPISLAVED3, MP45DT02_BUFFER_SIZE_2B, mp45dt02SPIData.tx_buffer, mp45dt02SPIData.rx_buffer); // 2 ms of data, 16 bits per sample.
-
-    //*******************
     // I2S2 configuration
     //*******************
-    memset(&mp45dt02I2sData, 0, sizeof(mp45dt02I2sData));
-    mp45dt02I2sData.guard = MEMORY_GUARD;
+    memset(&mp45dt02I2s2Data, 0, sizeof(mp45dt02I2s2Data));
+    mp45dt02I2s2Data.guard = MEMORY_GUARD;
 
-    memset(&mp45dt02I2SConfig, 0, sizeof(mp45dt02I2SConfig));
-    mp45dt02I2SConfig.tx_buffer = NULL;
-    mp45dt02I2SConfig.rx_buffer = mp45dt02I2sData.buffer;
-    mp45dt02I2SConfig.size      = MP45DT02_SAMPLE_SIZE_4B*2; // 2 ms of data
-    mp45dt02I2SConfig.end_cb    = mp45dt02I2SCb; // Callback function called at half-fill (1 ms of data) and full-fill (1 ms of data).
+    memset(&mp45dt02I2S2Config, 0, sizeof(mp45dt02I2S2Config));
+    mp45dt02I2S2Config.tx_buffer = NULL;
+    mp45dt02I2S2Config.rx_buffer = mp45dt02I2s2Data.buffer;
+    mp45dt02I2S2Config.size      = MP45DT02_SAMPLE_SIZE_4B*2; // 2 ms of data
+    mp45dt02I2S2Config.end_cb    = mp45dt02I2S2Cb; // Callback function called at half-fill (1 ms of data) and full-fill (1 ms of data).
 
-    mp45dt02I2SConfig.i2scfgr   = I2SCFG_MODE_MASTER_RECEIVE    |
+    mp45dt02I2S2Config.i2scfgr   = I2SCFG_MODE_MASTER_RECEIVE    |
                                   I2SCFG_STD_LSB_JUSTIFIED      |
                                   I2SCFG_CKPOL_STEADY_HIGH		|
 								  I2SCFG_DATAFORMAT_32B;
 
-    mp45dt02I2SConfig.i2spr     = (SPI_I2SPR_I2SDIV & MP45DT02_I2SDIV) |
+    mp45dt02I2S2Config.i2spr     = (SPI_I2SPR_I2SDIV & MP45DT02_I2SDIV) |
                                   (SPI_I2SPR_ODD & (MP45DT02_I2SODD << I2SPR_I2SODD_SHIFT));
 
-    i2sStart(&MP45DT02_I2S_DRIVER, &mp45dt02I2SConfig);
-    i2sStartExchange(&MP45DT02_I2S_DRIVER);
+    i2sStart(&MP45DT02_I2S2_DRIVER, &mp45dt02I2S2Config);
+    i2sStartExchange(&MP45DT02_I2S2_DRIVER);
+
+    //*******************
+    // I2S3 configuration
+    //*******************
+    memset(&mp45dt02I2s3Data, 0, sizeof(mp45dt02I2s3Data));
+    mp45dt02I2s3Data.guard = MEMORY_GUARD;
+
+    memset(&mp45dt02I2S3Config, 0, sizeof(mp45dt02I2S3Config));
+    mp45dt02I2S3Config.tx_buffer = NULL;
+    mp45dt02I2S3Config.rx_buffer = mp45dt02I2s3Data.buffer;
+    mp45dt02I2S3Config.size      = MP45DT02_SAMPLE_SIZE_4B*2; // 2 ms of data
+    mp45dt02I2S3Config.end_cb    = mp45dt02I2S3Cb; // Callback function called at half-fill (1 ms of data) and full-fill (1 ms of data).
+
+    mp45dt02I2S3Config.i2scfgr   =	//I2SCFG_MODE_SLAVE_RECEIVE |
+    								I2SCFG_MODE_MASTER_RECEIVE  |
+    							  I2SCFG_STD_LSB_JUSTIFIED      |
+                                  I2SCFG_CKPOL_STEADY_HIGH		|
+								  I2SCFG_DATAFORMAT_32B;
+
+    mp45dt02I2S3Config.i2spr     = (SPI_I2SPR_I2SDIV & MP45DT02_I2SDIV) |
+                                  (SPI_I2SPR_ODD & (MP45DT02_I2SODD << I2SPR_I2SODD_SHIFT));
+
+    i2sStart(&MP45DT02_I2S3_DRIVER, &mp45dt02I2S3Config);
+    i2sStartExchange(&MP45DT02_I2S3_DRIVER);
 }
 
 void mp45dt02Shutdown(void)
 {
-    i2sStopExchange(&MP45DT02_I2S_DRIVER);
-    i2sStop(&MP45DT02_I2S_DRIVER);
+    i2sStopExchange(&MP45DT02_I2S2_DRIVER);
+    i2sStop(&MP45DT02_I2S2_DRIVER);
 
-    spi3SlaveStopExchange(&SPISLAVED3);
-    spi3SlaveStop(&SPISLAVED3);
+    i2sStopExchange(&MP45DT02_I2S3_DRIVER);
+    i2sStop(&MP45DT02_I2S3_DRIVER);
 
-    chThdTerminate(I2SProcessingThd);
-    chSemReset(&I2SProcessingSem, 1);
-    chThdWait(I2SProcessingThd);
-    I2SProcessingThd = NULL;
+    chThdTerminate(I2S2ProcessingThd);
+    chSemReset(&I2S2ProcessingSem, 1);
+    chThdWait(I2S2ProcessingThd);
+    I2S2ProcessingThd = NULL;
 
-    chThdTerminate(SPIProcessingThd);
-    chSemReset(&SPIProcessingSem, 1);
-    chThdWait(SPIProcessingThd);
-    SPIProcessingThd = NULL;
+    chThdTerminate(I2S3ProcessingThd);
+    chSemReset(&I2S3ProcessingSem, 1);
+    chThdWait(I2S3ProcessingThd);
+    I2S3ProcessingThd = NULL;
 }
-
 

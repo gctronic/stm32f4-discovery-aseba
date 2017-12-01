@@ -27,9 +27,6 @@
 #ifndef __MP45DT02_PDM_H__
 #define __MP45DT02_PDM_H__
 
-#define I2S_PERIPHERAL 0
-#define SPI_PERIPHERAL 1
-
 #define I2S_AUDIOFREQ_16K					((uint32_t)16000U)
 #define I2S_AUDIOFREQ_32K					((uint32_t)32000U)
 #define AUDIO_IN_VOLUME						4 //64
@@ -93,9 +90,7 @@
 #define MP45DT02_DECIMATED_BUFFER_SIZE      (I2S_AUDIOFREQ_16K / 1000) * MP45DT02_NUM_CHANNELS // Number of samples in 1 ms for each channel x number of channels
 											//(MP45DT02_I2S_SAMPLE_SIZE_BITS / MP45DT02_FIR_DECIMATION_FACTOR) * MP45DT02_NUM_CHANNEL
 
-#define MIC_BUFFER_LEN MP45DT02_DECIMATED_BUFFER_SIZE*10
-
-typedef void (*mp45dt02FullBufferCb) (int16_t *data, uint16_t length, uint8_t peripheral);
+typedef void (*mp45dt02FullBufferCb) (float *data, uint16_t length);
 
 typedef struct {
     /* Callback function to be notified when the processing buffer is full. */

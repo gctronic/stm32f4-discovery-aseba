@@ -2,8 +2,8 @@
 #include <string.h>
 #include <ch.h>
 #include <hal.h>
-#include "spi_comm.h"
 #include "camera/dcmi_camera.h"
+#include "spi_comm.h"
 
 uint8_t spiRxBuff[SPI_COMMAND_SIZE];
 uint8_t spiTxBuff[SPI_COMMAND_SIZE];
@@ -18,6 +18,9 @@ static THD_WORKING_AREA(spi_thread_wa, 1024);
 static THD_FUNCTION(spi_thread, p) {
 	(void)p;
 	chRegSetThreadName("SPI thread");
+
+	chThdYield();
+
 //	uint32_t i = 0;
 //	//uint16_t transCount = 0; // image size / SPI_BUFF_LEN
 //	uint8_t id = 0;

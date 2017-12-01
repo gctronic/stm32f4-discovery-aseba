@@ -31,13 +31,15 @@
 #include "audio/audio_thread.h"
 #include "audio/microphone.h"
 #include "sensors/VL53L0X/VL53L0X.h"
-#include "motor.h"
+#include "motors.h"
 #include "sdcard.h"
 #include <ff.h>
 #include "diskio.h"
 #include "epuck1x/Asercom.h"
 #include "exti.h"
 #include "spi_comm.h"
+#include "sensors/battery_level.h"
+#include "ir_remote.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
@@ -88,10 +90,6 @@ void my_button_cb(void) {
 */	
 }
 
-void adc_start(void) {
-    adcStart(&ADCD2, NULL);
-}
-
 FRESULT open_append(
 	FIL* fp,            // [OUT] File object to create
 	const char* path    // [IN]  File name to be opened
@@ -120,12 +118,15 @@ static THD_FUNCTION(selector_thd, arg)
 
     systime_t time;
 
-    messagebus_topic_t *imuTopic; // = messagebus_find_topic_blocking(&bus, "/imu");
+    messagebus_topic_t *imuTopic = messagebus_find_topic_blocking(&bus, "/imu");
     imu_msg_t imu;
 
-    messagebus_topic_t *proxTopic; // = messagebus_find_topic_blocking(&bus, "/proximity");
+    messagebus_topic_t *proxTopic = messagebus_find_topic_blocking(&bus, "/proximity");
     proximity_msg_t proximity;
 	signed int leftSpeed=0, rightSpeed=0;
+
+	messagebus_topic_t *batteryTopic = messagebus_find_topic_blocking(&bus, "/battery_level");
+	battery_msg_t battery_value;
 
 	uint8_t playing = 0;
 
@@ -191,13 +192,13 @@ static THD_FUNCTION(selector_thd, arg)
 				}
 
 				// Sensors info print: each line contains data related to a single sensor.
-//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.ambient[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.reflected[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proximity.delta[i]);
-//		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
-//		        }
-//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.ambient[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d,", proximity.reflected[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "%.4d", proximity.delta[i]);
+		        	chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+		        }
+		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
 
 				// CSV print: each line contains IR0amb, IR0ref, IR0delta, IR1amb, ..., IR7delta.
 //		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
@@ -205,11 +206,11 @@ static THD_FUNCTION(selector_thd, arg)
 //		        }
 //		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
 
-		        // CSV print: each line contains only delta values for each sensor.
-		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
-		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
-		        }
-		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
+//		        // CSV print: each line contains only delta values for each sensor.
+//		        for (int i = 0; i < PROXIMITY_NB_CHANNELS; i++) {
+//		        	chprintf((BaseSequentialStream *)&SDU1, "%d;", proximity.delta[i]);
+//		        }
+//		        chprintf((BaseSequentialStream *)&SDU1, "\r\n");
 		        chThdSleepUntilWindowed(time, time + MS2ST(100)); // Refresh @ 10 Hz.
 				break;
 
@@ -357,6 +358,11 @@ static THD_FUNCTION(selector_thd, arg)
 				dcmiPrepare(&DCMID, &dcmicfg, po8030_get_image_size(), (uint32_t*)sample_buffer, NULL);
 				//dcmiStartOneShot(&DCMID);
 				*/
+
+				messagebus_topic_wait(batteryTopic, &battery_value, sizeof(battery_value));
+				//chprintf((BaseSequentialStream *)&SDU1, "battery raw = %d\r\n", get_battery_raw());
+				chprintf((BaseSequentialStream *)&SDU1, "battery raw = %d\r\n", battery_value.raw_value);
+				chThdSleepUntilWindowed(time, time + MS2ST(2000)); // Refresh @ 0.5 Hz.
 				break;
 
 			case 14: // ESP32 UART communication test.
@@ -448,14 +454,15 @@ int main(void)
 	i2c_start();
 	dcmi_start();
 	po8030_start();
-	//imu_start();
-	adc_start();
-	//proximity_start();
+	imu_start();
+	proximity_start();
 	dac_start();
 	motors_init();
 	exti_start();
+	ir_remote_start();
 	spi_comm_start();
 	mic_start();
+	battery_level_start();
 	
 	//i2cStop(&I2CD1);
 
@@ -489,7 +496,7 @@ int main(void)
     //demo_button_start(my_button_cb);
 
     /* Start shell on the USB port. */
-    //shell_start();
+   // shell_start();
 
     chThdSleepMilliseconds(5000);
 

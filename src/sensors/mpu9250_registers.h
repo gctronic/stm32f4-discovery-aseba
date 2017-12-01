@@ -138,4 +138,7 @@
 #define ZA_OFFSET_H        0x7D
 #define ZA_OFFSET_L        0x7E
 
+#define INTERRUPT_DATA_RDY_BIT	0
+#define INTERRUPT_DATA_RDY		(1 << 0)
+
 #endif

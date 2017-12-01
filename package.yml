@@ -40,7 +40,8 @@ target.arm:
     - src/sensors/imu.c
     - src/sensors/mpu9250.c
     - src/sensors/proximity.c
-    - src/motor.c
+    - src/sensors/battery_level.c
+    - src/motors.c
     - fatfs/src/ff.c
     - src/fatfs_diskio.c
     - src/fatfs_syscall.c
@@ -59,6 +60,9 @@ target.arm:
     - src/spi_comm.c
     - src/audio/microphone.c
     - src/audio/mp45dt02_processing.c
-    
+    - ChibiOS_ext/os/hal/src/spi3_slave.c
+    - ChibiOS_ext/os/hal/ports/STM32/LLD/SPIv1/spi3_slave_lld.c
+    - src/ir_remote.c
+
 templates:
     src/src.mk.jinja: src/src.mk

@@ -2,15 +2,17 @@
 #include <stdlib.h>
 #include <math.h>
 #include "epuck1x-wrapper.h"
-#include "..\leds.h"
-#include "..\utility.h"
-#include "..\usbcfg.h"
-#include "..\motor.h"
-#include "..\sensors\proximity.h"
-#include "..\main.h"
-#include "..\camera\po8030.h"
+#include "..\audio\microphone.h"
 #include "..\camera\dcmi_camera.h"
+#include "..\camera\po8030.h"
 #include "..\sensors\imu.h"
+#include "..\sensors\proximity.h"
+#include "..\leds.h"
+#include "..\main.h"
+#include "..\motors.h"
+#include "..\usbcfg.h"
+#include "..\utility.h"
+
 
 // LEDs handling.
 void e_set_led(unsigned int led_number, unsigned int value) {
@@ -297,5 +299,31 @@ void e_acc_calibr(void) {
 
 void e_display_angle(void) {
 
+}
+
+int e_get_micro(unsigned int micro_id) {
+	int16_t value = 0;
+	if(micro_id == 2) {
+		value = mic_get_last(3); // Front and back microphones are swapped in the e-puck2 with respect to e-puck1.x.
+	} else {
+		value = mic_get_last(micro_id);
+	}
+	return (value>>4); // Adapt the values to be compatible with e-puck1.x (16 bits => 12 bits).
+}
+
+int e_get_micro_average(unsigned int micro_id, unsigned int filter_size) {
+	(void)micro_id;
+	(void)filter_size;
+	return 0;
+}
+
+int e_get_micro_volume (unsigned int micro_id) {
+	int32_t value = 0;
+	if(micro_id == 2) {
+		value = mic_get_volume(3); // Front and back microphones are swapped in the e-puck2 with respect to e-puck1.x.
+	} else {
+		value = mic_get_volume(micro_id);
+	}
+	return (value>>4); // Adapt the values to be compatible with e-puck1.x (16 bits => 12 bits).
 }
 

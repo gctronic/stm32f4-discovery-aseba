@@ -25,6 +25,6 @@
 
 int8_t mpu9250_setup(int config);
 bool mpu9250_ping(void);
-void mpu9250_read(float *gyro, float *acc, float *temp, int16_t *gyro_raw, int16_t *acc_raw);
+void mpu9250_read(float *gyro, float *acc, float *temp, int16_t *gyro_raw, int16_t *acc_raw, uint8_t *status);
 
 #endif // MPU9250_H

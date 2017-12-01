@@ -75,7 +75,7 @@
 
 #define GPIOB_IR5_AN				0U
 #define GPIOB_IR4_AN				1U
-#define GPIOB_IMU_INT				2U
+#define GPIOB_LED_BODY				2U
 #define GPIOB_SPI1_SCK				3U
 #define GPIOB_SPI1_MISO				4U
 #define GPIOB_MIC34_DATA			5U
@@ -122,7 +122,7 @@
 #define GPIOD_SPI1_CS_ENC_R			12U
 #define GPIOD_ENC_R_INT				13U
 #define GPIOD_LED_FRONT             14U
-#define GPIOD_LED_BODY              15U
+#define GPIOD_IMU_INT				15U
 
 #define GPIOE_CAM_D2				0U
 #define GPIOE_CAM_D3				1U
@@ -259,7 +259,7 @@
                                      PIN_MODE_ANALOG(GPIOA_AUDIO_SPEAKER) |	\
                                      PIN_MODE_ALTERNATE(GPIOA_CAM_PCLK) |	\
                                      PIN_MODE_ALTERNATE(GPIOA_SPI1_MOSI) |	\
-                                     PIN_MODE_ALTERNATE(GPIOA_CAM_MCLK) |	\
+                                     PIN_MODE_INPUT(GPIOA_CAM_MCLK) |	\
                                      PIN_MODE_INPUT(GPIOA_USB_PRESENT) | 	\
                                      PIN_MODE_INPUT(GPIOA_DIST_INT) |  		\
                                      PIN_MODE_ALTERNATE(GPIOA_OTG_FS_DM) |  \
@@ -307,7 +307,7 @@
                                      PIN_PUPDR_FLOATING(GPIOA_AUDIO_SPEAKER) | \
                                      PIN_PUPDR_PULLUP(GPIOA_CAM_PCLK) |		\
                                      PIN_PUPDR_FLOATING(GPIOA_SPI1_MOSI) |	\
-                                     PIN_PUPDR_PULLUP(GPIOA_CAM_MCLK) |		\
+                                     PIN_PUPDR_FLOATING(GPIOA_CAM_MCLK) |		\
                                      PIN_PUPDR_FLOATING(GPIOA_USB_PRESENT) |\
                                      PIN_PUPDR_FLOATING(GPIOA_DIST_INT) |  	\
                                      PIN_PUPDR_FLOATING(GPIOA_OTG_FS_DM) |  \
@@ -353,7 +353,7 @@
  *
  * PB0  - PROX AN IR5				(analog).
  * PB1  - PROX AN IR4				(analog).
- * PB2  - IMU INT					(input pulldown).
+ * PB2  - LED BODY					(output pushpull maximum).
  * PB3  - SPI1 SCK					(alternate 5).
  * PB4  - SPI1 MISO					(alternate 5).
  * PB5  - MIC 3,4 DATA (SPI3 MOSI)	(alternate 6).
@@ -370,7 +370,7 @@
  */
 #define VAL_GPIOB_MODER             (PIN_MODE_ANALOG(GPIOB_IR5_AN) |		\
                                      PIN_MODE_ANALOG(GPIOB_IR4_AN) |		\
-                                     PIN_MODE_INPUT(GPIOB_IMU_INT) |		\
+                                     PIN_MODE_OUTPUT(GPIOB_LED_BODY) |		\
                                      PIN_MODE_ALTERNATE(GPIOB_SPI1_SCK) |	\
                                      PIN_MODE_ALTERNATE(GPIOB_SPI1_MISO) |	\
                                      PIN_MODE_ALTERNATE(GPIOB_MIC34_DATA) |	\
@@ -386,7 +386,7 @@
                                      PIN_MODE_ALTERNATE(GPIOB_MIC12_DATA))
 #define VAL_GPIOB_OTYPER            (PIN_OTYPE_OPENDRAIN(GPIOB_IR5_AN) |	\
                                      PIN_OTYPE_OPENDRAIN(GPIOB_IR4_AN) |	\
-                                     PIN_OTYPE_PUSHPULL(GPIOB_IMU_INT) |	\
+                                     PIN_OTYPE_PUSHPULL(GPIOB_LED_BODY) |	\
                                      PIN_OTYPE_PUSHPULL(GPIOB_SPI1_SCK) |	\
                                      PIN_OTYPE_PUSHPULL(GPIOB_SPI1_MISO) |	\
                                      PIN_OTYPE_PUSHPULL(GPIOB_MIC34_DATA) |	\
@@ -402,7 +402,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOB_MIC12_DATA))
 #define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(GPIOB_IR5_AN) |		\
                                      PIN_OSPEED_100M(GPIOB_IR4_AN) |		\
-                                     PIN_OSPEED_100M(GPIOB_IMU_INT) |		\
+                                     PIN_OSPEED_100M(GPIOB_LED_BODY) |		\
                                      PIN_OSPEED_100M(GPIOB_SPI1_SCK) |		\
                                      PIN_OSPEED_100M(GPIOB_SPI1_MISO) |		\
                                      PIN_OSPEED_100M(GPIOB_MIC34_DATA) |	\
@@ -418,7 +418,7 @@
                                      PIN_OSPEED_100M(GPIOB_MIC12_DATA))
 #define VAL_GPIOB_PUPDR             (PIN_PUPDR_FLOATING(GPIOB_IR5_AN) |		\
                                      PIN_PUPDR_FLOATING(GPIOB_IR4_AN) |		\
-                                     PIN_PUPDR_PULLDOWN(GPIOB_IMU_INT) |	\
+                                     PIN_PUPDR_PULLDOWN(GPIOB_LED_BODY) |	\
                                      PIN_PUPDR_PULLUP(GPIOB_SPI1_SCK) |		\
                                      PIN_PUPDR_PULLUP(GPIOB_SPI1_MISO) |	\
                                      PIN_PUPDR_PULLUP(GPIOB_MIC34_DATA) |	\
@@ -434,7 +434,7 @@
                                      PIN_PUPDR_PULLUP(GPIOB_MIC12_DATA))
 #define VAL_GPIOB_ODR               (PIN_ODR_LOW(GPIOB_IR5_AN) |			\
                                      PIN_ODR_LOW(GPIOB_IR4_AN) |			\
-                                     PIN_ODR_HIGH(GPIOB_IMU_INT) |			\
+                                     PIN_ODR_HIGH(GPIOB_LED_BODY) |			\
                                      PIN_ODR_HIGH(GPIOB_SPI1_SCK) |			\
                                      PIN_ODR_HIGH(GPIOB_SPI1_MISO) |		\
                                      PIN_ODR_HIGH(GPIOB_MIC34_DATA) |		\
@@ -450,7 +450,7 @@
                                      PIN_ODR_HIGH(GPIOB_MIC12_DATA))
 #define VAL_GPIOB_AFRL              (PIN_AFIO_AF(GPIOB_IR5_AN, 0) |			\
                                      PIN_AFIO_AF(GPIOB_IR4_AN, 0) |			\
-                                     PIN_AFIO_AF(GPIOB_IMU_INT, 0) |		\
+                                     PIN_AFIO_AF(GPIOB_LED_BODY, 0) |		\
                                      PIN_AFIO_AF(GPIOB_SPI1_SCK, 5) |		\
                                      PIN_AFIO_AF(GPIOB_SPI1_MISO, 5) |		\
                                      PIN_AFIO_AF(GPIOB_MIC34_DATA, 6) |		\
@@ -600,7 +600,7 @@
  * PD12 - SPI1 CS ENCODER RIGHT		(output pushpull maximum).
  * PD13 - ENCODER RIGHT INT			(input floating).
  * PD14 - LED FRONT                 (output pushpull maximum).
- * PD15 - LED BODY                  (output pushpull maximum).
+ * PD15 - IMU INT	                (input pulldown).
  */
 #define VAL_GPIOD_MODER             (PIN_MODE_ALTERNATE(GPIOD_CAN_RX) |		\
                                      PIN_MODE_ALTERNATE(GPIOD_CAN_TX) |		\
@@ -617,7 +617,7 @@
                                      PIN_MODE_OUTPUT(GPIOD_SPI1_CS_ENC_R) |	\
                                      PIN_MODE_INPUT(GPIOD_ENC_R_INT) |		\
                                      PIN_MODE_OUTPUT(GPIOD_LED_FRONT) |     \
-                                     PIN_MODE_OUTPUT(GPIOD_LED_BODY))
+                                     PIN_MODE_INPUT(GPIOD_IMU_INT))
 #define VAL_GPIOD_OTYPER            (PIN_OTYPE_PUSHPULL(GPIOD_CAN_RX) |		\
                                      PIN_OTYPE_PUSHPULL(GPIOD_CAN_TX) |		\
                                      PIN_OTYPE_PUSHPULL(GPIOD_SDIO_CMD) |	\
@@ -633,7 +633,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOD_SPI1_CS_ENC_R) | \
                                      PIN_OTYPE_PUSHPULL(GPIOD_ENC_R_INT) |	\
                                      PIN_OTYPE_PUSHPULL(GPIOD_LED_FRONT) |  \
-                                     PIN_OTYPE_PUSHPULL(GPIOD_LED_BODY))
+                                     PIN_OTYPE_PUSHPULL(GPIOD_IMU_INT))
 #define VAL_GPIOD_OSPEEDR           (PIN_OSPEED_100M(GPIOD_CAN_RX) |		\
                                      PIN_OSPEED_100M(GPIOD_CAN_TX) |		\
                                      PIN_OSPEED_100M(GPIOD_SDIO_CMD) |		\
@@ -649,7 +649,7 @@
                                      PIN_OSPEED_100M(GPIOD_SPI1_CS_ENC_R) |	\
                                      PIN_OSPEED_100M(GPIOD_ENC_R_INT) |		\
                                      PIN_OSPEED_100M(GPIOD_LED_FRONT) |     \
-                                     PIN_OSPEED_100M(GPIOD_LED_BODY))
+                                     PIN_OSPEED_100M(GPIOD_IMU_INT))
 #define VAL_GPIOD_PUPDR             (PIN_PUPDR_PULLUP(GPIOD_CAN_RX) |		\
                                      PIN_PUPDR_PULLUP(GPIOD_CAN_TX) |		\
                                      PIN_PUPDR_PULLUP(GPIOD_SDIO_CMD) |		\
@@ -665,7 +665,7 @@
                                      PIN_PUPDR_FLOATING(GPIOD_SPI1_CS_ENC_R) | \
                                      PIN_PUPDR_FLOATING(GPIOD_ENC_R_INT) |	\
                                      PIN_PUPDR_PULLDOWN(GPIOD_LED_FRONT) |  \
-                                     PIN_PUPDR_PULLDOWN(GPIOD_LED_BODY))
+                                     PIN_PUPDR_FLOATING(GPIOD_IMU_INT))
 #define VAL_GPIOD_ODR               (PIN_ODR_HIGH(GPIOD_CAN_RX) |			\
                                      PIN_ODR_HIGH(GPIOD_CAN_TX) |			\
                                      PIN_ODR_HIGH(GPIOD_SDIO_CMD) |			\
@@ -681,7 +681,7 @@
                                      PIN_ODR_HIGH(GPIOD_SPI1_CS_ENC_R) |	\
                                      PIN_ODR_HIGH(GPIOD_ENC_R_INT) |		\
                                      PIN_ODR_HIGH(GPIOD_LED_FRONT) |		\
-                                     PIN_ODR_HIGH(GPIOD_LED_BODY))
+                                     PIN_ODR_HIGH(GPIOD_IMU_INT))
 #define VAL_GPIOD_AFRL              (PIN_AFIO_AF(GPIOD_CAN_RX, 9) |			\
                                      PIN_AFIO_AF(GPIOD_CAN_TX, 9) |			\
                                      PIN_AFIO_AF(GPIOD_SDIO_CMD, 12) |		\
@@ -697,7 +697,7 @@
                                      PIN_AFIO_AF(GPIOD_SPI1_CS_ENC_R, 0) |	\
                                      PIN_AFIO_AF(GPIOD_ENC_R_INT, 0) |		\
                                      PIN_AFIO_AF(GPIOD_LED_FRONT, 0) |      \
-                                     PIN_AFIO_AF(GPIOD_LED_BODY, 0))
+                                     PIN_AFIO_AF(GPIOD_IMU_INT, 0))
 
 /*
  * GPIOE setup:
